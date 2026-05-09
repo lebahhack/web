@@ -9,37 +9,52 @@ export async function onRequest() {
 
   const posts = await getPosts();
 
-  const content = posts.map(post => `
+  const content = `
 
-    <div class="card">
+<div class="section">
 
-      <a href="/${post.slug}">
+<h3>
+🔥 POSTINGAN TERBARU
+</h3>
 
-        ${
-          post.image
-            ? `<img
-                src="${post.image}"
-                alt="${post.title}"
-                width="300">`
-            : ""
-        }
+<div class="grid">
 
-        <h2>
-          ${post.title}
-        </h2>
+${posts.map(post => `
 
-      </a>
+<div class="card">
 
-      <p>
-        ${cleanDescription(
-          post.content,
-          120
-        )}
-      </p>
+<a href="/${post.slug}">
 
-    </div>
+${
+  post.image
+    ? `<img
+        src="${post.image}"
+        width="200"
+        height="140"
+        alt="${post.title}">`
+    : ""
+}
 
-  `).join("");
+</a>
+
+<a href="/${post.slug}">
+${post.title}
+</a>
+
+<span>
+${cleanDescription(post.content, 60)}
+</span>
+
+</div>
+
+`).join("")}
+
+</div>
+
+</div>
+
+`;
+  
 
   const html = renderTemplate({
 
