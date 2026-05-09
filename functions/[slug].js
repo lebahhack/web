@@ -4,9 +4,7 @@ import {
   canonical,
   sanitizeSlug,
   cleanDescription,
-  readingTime,
-  postImage,
-  cardImage
+  readingTime
 } from "../lib/config";
 
 import { getPost, getPosts } from "../lib/api";
@@ -16,13 +14,13 @@ export async function onRequest(context) {
   try {
 
     // ======================
-    // PARAM
+    // PARAM SLUG
     // ======================
     const { slug } = context.params;
     const safeSlug = sanitizeSlug(slug);
 
     // ======================
-    // FETCH DATA
+    // GET DATA
     // ======================
     const post = await getPost(safeSlug);
 
@@ -33,12 +31,10 @@ export async function onRequest(context) {
     const posts = await getPosts();
 
     // ======================
-    // RELATED POST
+    // RELATED POSTS
     // ======================
     const related = posts
-      .filter(p =>
-        sanitizeSlug(p.slug) !== safeSlug
-      )
+      .filter(p => sanitizeSlug(p.slug) !== safeSlug)
       .slice(0, 6);
 
     // ======================
@@ -50,15 +46,15 @@ export async function onRequest(context) {
     const url = "/" + safeSlug;
     const fullUrl = canonical(url);
 
-    const og = "/og/" + safeSlug;
+    const ogImage = "/og/" + safeSlug;
 
     // ======================
-    // INTERNAL LINK SIMPLE BOOST
+    // SIMPLE INTERNAL LINK
     // ======================
     let content = post.content || "";
 
-    // simple internal link (safe version)
     related.forEach(p => {
+
       const title = p.title || "";
       if (!title) return;
 
@@ -71,10 +67,11 @@ export async function onRequest(context) {
         regex,
         `<a href="/${sanitizeSlug(p.slug)}">${keyword}</a>`
       );
+
     });
 
     // ======================
-    // SCHEMA (BlogPosting)
+    // SCHEMA BLOGPOSTING
     // ======================
     const schema = `
 <script type="application/ld+json">
@@ -83,7 +80,7 @@ export async function onRequest(context) {
   "@type": "BlogPosting",
   "headline": "${post.title}",
   "description": "${desc}",
-  "image": "${og}",
+  "image": "${ogImage}",
   "mainEntityOfPage": "${fullUrl}",
   "author": {
     "@type": "Organization",
@@ -103,29 +100,25 @@ export async function onRequest(context) {
     const relatedGrid = related.map(p => `
       <div class="card">
         <a href="/${sanitizeSlug(p.slug)}">
-          ${cardImage(`/og/${sanitizeSlug(p.slug)}`, p.title)}
           <h4>${p.title}</h4>
         </a>
       </div>
     `).join("");
 
     // ======================
-    // RENDER
+    // RENDER OUTPUT
     // ======================
     return layout({
       title: post.title,
       description: desc,
-
       canonical: fullUrl,
-      image: og,
+      image: ogImage,
       schema,
 
       content: `
         <link rel="amphtml" href="/amp/${safeSlug}">
 
         <article class="post">
-
-          ${postImage(og, post.title)}
 
           <h1>${post.title}</h1>
 
