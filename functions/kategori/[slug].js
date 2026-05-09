@@ -1,106 +1,77 @@
+import { getPosts } from "../../lib/api";
+import { renderTemplate } from "../../lib/template";
+import { SITE,sanitizeSlug,cleanDescription } from "../../lib/config";
 
-import { getByKategori } from "../../lib/api";
-import { canonical, sanitizeSlug, cleanDescription } from "../../lib/config";
+export async function onRequest({ params,request }) {
 
-export async function onRequest(context) {
-  const { slug } = context.params;
+const kategori=sanitizeSlug(params.slug);
 
-  const safeSlug = sanitizeSlug(slug);
+const url=new URL(request.url);
 
-  const url = new URL(context.request.url);
-  const page = parseInt(url.searchParams.get("page")) || 1;
+const page=parseInt(
+url.searchParams.get("page")||"1"
+);
 
-  const perPage = 12;
+const perPage=20;
 
-  // ======================
-  // DATA
-  // ======================
-  const posts = await getByKategori(safeSlug);
+const posts=(await getPosts())
+.filter(p=>
+(p.kategori||"umum")
+.toLowerCase()===kategori
+.toLowerCase()
+);
 
-  const sorted = posts.reverse();
-
-  // ======================
-  // PAGINATION
-  // ======================
-  const start = (page - 1) * perPage;
-  const end = start + perPage;
-
-  const current = sorted.slice(start, end);
-
-  const totalPage = Math.ceil(sorted.length / perPage);
-
-  // ======================
-  // GRID HTML
-  // ======================
-  const grid = current.map(p => `
-    <div class="card">
-      <a href="/${sanitizeSlug(p.kategori)}/${sanitizeSlug(p.slug)}">
-        <img src="/og/${sanitizeSlug(p.slug)}" alt="${p.title}" loading="lazy">
-        <h3>${p.title}</h3>
-      </a>
-    </div>
-  `).join("");
-
-  // ======================
-  // SEO DESCRIPTION
-  // ======================
-  const description = cleanDescription(
-    `Kumpulan artikel kategori ${safeSlug}. Update tutorial, tips, dan insight terbaru dalam topik ini.`
-  );
-
-  // ======================
-  // RENDER
-  // ======================
-  return layout({
-    title: `Kategori: ${safeSlug} - LebahHack`,
-    description,
-    canonical: page > 1
-      ? `/kategori/${safeSlug}?page=${page}`
-      : `/kategori/${safeSlug}`,
-    content: `
-      <h1>Kategori: ${safeSlug}</h1>
-
-      <p style="color:#666">
-        Semua artikel dalam kategori ini
-      </p>
-
-      <div class="grid">
-        ${grid}
-      </div>
-
-      ${pagination(page, totalPage, safeSlug)}
-    `
-  });
+if(!posts.length){
+return new Response(
+"404 Not Found",
+{ status:404 }
+);
 }
 
-// ======================
-// PAGINATION
-// ======================
-function pagination(current, total, slug) {
-  if (total <= 1) return "";
+const total=posts.length;
+const totalPages=Math.ceil(total/perPage);
 
-  let html = `<div class="pagination">`;
+const paginated=posts.slice(
+(page-1)*perPage,
+page*perPage
+);
 
-  const start = Math.max(1, current - 2);
-  const end = Math.min(total, current + 2);
+const title=`Kategori ${kategori} - ${SITE.name}`;
 
-  if (current > 1) {
-    html += `<a href="/kategori/${slug}?page=${current - 1}">« Prev</a>`;
-  }
+const description=cleanDescription(
+`Kumpulan artikel kategori ${kategori} terbaru dari ${SITE.name}`,
+160
+);
 
-  for (let i = start; i <= end; i++) {
-    html += `
-      <a href="/kategori/${slug}?page=${i}" class="${i === current ? "active" : ""}">
-        ${i}
-      </a>
-    `;
-  }
+const jsonld={
+"@context":"https://schema.org",
+"@type":"CollectionPage",
+name:title,
+description,
+url:`${SITE.url}/kategori/${kategori}`
+};
 
-  if (current < total) {
-    html += `<a href="/kategori/${slug}?page=${current + 1}">Next »</a>`;
-  }
+return new Response(
+renderTemplate({
+site:SITE,
+title,
+description,
+slug:`kategori/${kategori}`,
+posts:paginated,
+image:SITE.logo,
+jsonld,
+pagination:{
+page,
+totalPages,
+base:`/kategori/${kategori}`
+}
+}),
+{
+headers:{
+"content-type":"text/html;charset=UTF-8",
+"cache-control":"public,max-age=300,s-maxage=600"
+}
+}
+);
 
-  html += `</div>`;
-
-  return html;
 }
