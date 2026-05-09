@@ -1,9 +1,8 @@
 import { getPost } from "../../lib/api";
-import { renderAmp } from "../../lib/renderAmp";
+import { renderAmpPage } from "../../lib/renderAmp";
 import { sanitizeSlug, cleanDescription } from "../../lib/config";
 
 export async function onRequest(context) {
-
   const { slug } = context.params;
 
   const safeSlug = sanitizeSlug(slug);
@@ -15,7 +14,7 @@ export async function onRequest(context) {
   }
 
   // ======================
-  // SEO DESCRIPTION
+  // DESCRIPTION (SEO SAFE)
   // ======================
   const description = cleanDescription(
     post.meta_description ||
@@ -25,37 +24,42 @@ export async function onRequest(context) {
   );
 
   // ======================
-  // AMP CLEAN CONTENT
+  // AMP CONTENT CLEAN
   // ======================
   const content = cleanAmpContent(post.content);
 
-  // ======================
-  // RENDER AMP
-  // ======================
-  const html = renderAmp({
-    title: post.title,
-    description,
-    canonical: "/" + safeSlug,
-    content,
-    siteName: "AI MR DENNIS"
-  });
-
-  return new Response(html, {
-    headers: {
-      "content-type": "text/html;charset=UTF-8",
-      "cache-control": "public,max-age=300"
+  return new Response(
+    renderAmpPage({
+      title: post.title,
+      description,
+      slug: safeSlug,
+      content,
+      image: post.image || ""
+    }),
+    {
+      headers: {
+        "content-type": "text/html;charset=UTF-8",
+        "cache-control": "public,max-age=300"
+      }
     }
-  });
+  );
 }
 
 // ======================
-// AMP CLEANER
+// AMP CONTENT CLEANER
 // ======================
 function cleanAmpContent(html = "") {
   return String(html)
+
+    // remove script/style
     .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
     .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, "")
+
+    // optional: strip dangerous attributes
     .replace(/on\w+="[^"]*"/g, "")
+
+    // fix spacing
     .replace(/\s+/g, " ")
+
     .trim();
 }
