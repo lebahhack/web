@@ -1,4 +1,4 @@
-import { layout } from "../../lib/render";
+
 import { getByKategori } from "../../lib/api";
 import { canonical, sanitizeSlug, cleanDescription } from "../../lib/config";
 
