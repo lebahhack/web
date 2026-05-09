@@ -1,88 +1,69 @@
 import { getPosts } from "../lib/api";
 import { renderTemplate } from "../lib/template";
-import {
-  cleanDescription,
-  SITE
-} from "../lib/config";
+import { SITE,cleanDescription } from "../lib/config";
 
-export async function onRequest() {
+export async function onRequest({ request }) {
 
-  const posts = await getPosts();
+const url=new URL(request.url);
 
-  const content = `
+const page=parseInt(
+url.searchParams.get("page")||"1"
+);
 
-<div class="section">
+const perPage=20;
 
-<h3>
-🔥 POSTINGAN TERBARU
-</h3>
+const posts=await getPosts();
 
-<div class="grid">
+const total=posts.length;
 
-${posts.map(post => `
+const totalPages=Math.ceil(total/perPage);
 
-<div class="card">
+const paginated=posts.slice(
+(page-1)*perPage,
+page*perPage
+);
 
-<a href="/${post.slug}">
+const title=SITE.name;
 
-${
-  post.image
-    ? `<img
-        src="${post.image}"
-        width="200"
-        height="140"
-        alt="${post.title}">`
-    : ""
+const description=cleanDescription(
+SITE.description,
+160
+);
+
+const jsonld={
+"@context":"https://schema.org",
+"@type":"WebSite",
+name:SITE.name,
+url:SITE.url,
+description,
+potentialAction:{
+"@type":"SearchAction",
+target:`${SITE.url}/search?q={search_term_string}`,
+"query-input":"required name=search_term_string"
 }
+};
 
-</a>
+return new Response(
+renderTemplate({
+site:SITE,
+title,
+description,
+slug:"",
+posts:paginated,
+image:SITE.logo,
+jsonld,
+pagination:{
+page,
+totalPages,
+base:"/"
+}
+}),
+{
+headers:{
+"content-type":"text/html;charset=UTF-8",
+"cache-control":"public,max-age=300,s-maxage=600"
+}
+}
+);
 
-<a href="/${post.slug}">
-${post.title}
-</a>
-
-<span>
-${cleanDescription(post.content, 60)}
-</span>
-
-</div>
-
-`).join("")}
-
-</div>
-
-</div>
-
-`;
-  
-
-  const html = renderTemplate({
-
-    amp: false,
-
-    title:
-      SITE.name,
-
-    description:
-      SITE.description,
-
-    canonical:
-      SITE.url,
-
-    content,
-
-    image:
-      SITE.logo,
-
-    siteName:
-      SITE.name
-
-  });
-
-  return new Response(html, {
-    headers: {
-      "content-type":
-        "text/html;charset=UTF-8"
-    }
-  });
 }
