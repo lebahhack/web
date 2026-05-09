@@ -1,4 +1,15 @@
-import { layout } from "../../lib/render";import { SITE,canonical,ogImage as buildOg,sanitizeSlug,stripHTML,readingTime,postImage,cardImage } from "../../lib/config";import { getPosts,getPost } from "../../lib/api";
+import {
+  SITE,
+  canonical,
+  ogImage as buildOg,
+  sanitizeSlug,
+  cleanDescription,
+  readingTime,
+  postImage,
+  cardImage
+} from "../../lib/config";
+
+import { getPosts,getPost } from "../../lib/api";
 
 export async function onRequest(context){
 
@@ -26,7 +37,7 @@ post.content = autoLink(post.content,related);
 
 const read = readingTime(post.content);
 
-const desc = stripHTML(post.content).slice(0,160);
+const desc = cleanDescription(post.content);
 
 const postUrl = "/" + kategori + "/" + slug;
 
