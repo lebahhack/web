@@ -1,53 +1,113 @@
 import { getPosts } from "../lib/api";
-import { sanitizeSlug } from "../lib/config";
+import { renderTemplate } from "../lib/template";
+import { SITE,cleanDescription } from "../lib/config";
 
-export async function onRequest(context) {
+export async function onRequest({ request }) {
 
-  const url = new URL(context.request.url);
-  const q = (url.searchParams.get("q") || "").toLowerCase().trim();
+const url=new URL(request.url);
 
-  if (!q) {
-    return json([]);
-  }
+const q=(url.searchParams.get("q")||"")
+.toLowerCase()
+.trim();
 
-  const posts = await getPosts();
+const page=parseInt(
+url.searchParams.get("page")||"1"
+);
 
-  // ======================
-  // SIMPLE SEARCH ENGINE
-  // ======================
-  const results = posts.filter(p => {
+const perPage=20;
 
-    const title = (p.title || "").toLowerCase();
-    const content = (p.content || "").toLowerCase();
-    const kategori = (p.kategori || "").toLowerCase();
-
-    return (
-      title.includes(q) ||
-      content.includes(q) ||
-      kategori.includes(q)
-    );
-  });
-
-  // ======================
-  // LIMIT RESULTS
-  // ======================
-  const limited = results.slice(0, 10).map(p => ({
-    title: p.title,
-    url: `/${sanitizeSlug(p.kategori)}/${sanitizeSlug(p.slug)}`,
-    kategori: p.kategori
-  }));
-
-  return json(limited);
+if(!q){
+return Response.redirect(
+`${SITE.url}/`,
+302
+);
 }
 
-// ======================
-// JSON RESPONSE
-// ======================
-function json(data) {
-  return new Response(JSON.stringify(data), {
-    headers: {
-      "content-type": "application/json;charset=UTF-8",
-      "cache-control": "public,max-age=60"
-    }
-  });
+const posts=(await getPosts())
+
+.map(post=>({
+...post,
+score:getScore(q,post)
+}))
+
+.filter(p=>p.score>0)
+
+.sort((a,b)=>b.score-a.score);
+
+const total=posts.length;
+
+const totalPages=Math.ceil(
+total/perPage
+);
+
+const paginated=posts.slice(
+(page-1)*perPage,
+page*perPage
+);
+
+const title=`Search "${q}" - ${SITE.name}`;
+
+const description=cleanDescription(
+`Hasil pencarian ${q} di ${SITE.name}`,
+160
+);
+
+const jsonld={
+"@context":"https://schema.org",
+"@type":"SearchResultsPage",
+name:title,
+description,
+url:`${SITE.url}/search?q=${encodeURIComponent(q)}`
+};
+
+return new Response(
+renderTemplate({
+site:SITE,
+title,
+description,
+slug:`search?q=${q}`,
+posts:paginated,
+image:SITE.logo,
+jsonld,
+search:q,
+pagination:{
+page,
+totalPages,
+base:`/search?q=${encodeURIComponent(q)}`
+}
+}),
+{
+headers:{
+"content-type":"text/html;charset=UTF-8",
+"cache-control":"public,max-age=300,s-maxage=600"
+}
+}
+);
+
+}
+
+function getScore(q,post){
+
+let score=0;
+
+const title=(post.title||"")
+.toLowerCase();
+
+const content=(post.content||"")
+.toLowerCase();
+
+q.split(" ").forEach(word=>{
+
+if(title.includes(word)){
+score+=3;
+}
+
+if(content.includes(word)){
+score+=1;
+}
+
+});
+
+return score;
+
 }
