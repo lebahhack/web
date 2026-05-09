@@ -1,64 +1,21 @@
 import { getPost } from "../lib/api";
-import { renderAmp } from "../lib/renderAmp";
 import { sanitizeSlug, cleanDescription } from "../lib/config";
 
 export async function onRequest(context) {
-  try {
+  const { slug } = context.params;
 
-    const { slug } = context.params;
+  const post = await getPost(sanitizeSlug(slug));
 
-    const safeSlug = sanitizeSlug(slug);
-
-    const post = await getPost(safeSlug);
-
-    if (!post) {
-      return new Response("404 Not Found", { status: 404 });
-    }
-
-    // ======================
-    // SEO DESCRIPTION
-    // ======================
-    const description = cleanDescription(
-      post.meta_description || post.content || post.title,
-      160
-    );
-
-    // ======================
-    // CLEAN CONTENT AMP
-    // ======================
-    const content = cleanAmpContent(post.content);
-
-    // ======================
-    // RENDER AMP PAGE
-    // ======================
-    const html = renderAmp({
-      title: post.title,
-      description,
-      canonical: "/" + safeSlug,
-      content,
-      siteName: "AI MR DENNIS"
-    });
-
-    return new Response(html, {
-      headers: {
-        "content-type": "text/html;charset=UTF-8",
-        "cache-control": "public,max-age=300"
-      }
-    });
-
-  } catch (err) {
-    return new Response("Error: " + err.message, { status: 500 });
+  if (!post) {
+    return new Response("404", { status: 404 });
   }
-}
 
-// ======================
-// AMP CONTENT CLEANER
-// ======================
-function cleanAmpContent(html = "") {
-  return String(html)
-    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, "")
-    .replace(/on\w+="[^"]*"/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  const description = cleanDescription(post.content, 160);
+
+  return new Response(`
+    <h1>${post.title}</h1>
+    <p>${description}</p>
+  `, {
+    headers: { "content-type": "text/html" }
+  });
 }
