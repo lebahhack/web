@@ -1,144 +1,64 @@
-import { layout } from "../lib/render";
-import {
-  SITE,
-  canonical,
-  sanitizeSlug,
-  cleanDescription,
-  readingTime
-} from "../lib/config";
-
-import { getPost, getPosts } from "../lib/api";
+import { getPost } from "../lib/api";
+import { renderAmp } from "../lib/renderAmp";
+import { sanitizeSlug, cleanDescription } from "../lib/config";
 
 export async function onRequest(context) {
-
   try {
 
-    // ======================
-    // PARAM SLUG
-    // ======================
     const { slug } = context.params;
+
     const safeSlug = sanitizeSlug(slug);
 
-    // ======================
-    // GET DATA
-    // ======================
     const post = await getPost(safeSlug);
 
     if (!post) {
       return new Response("404 Not Found", { status: 404 });
     }
 
-    const posts = await getPosts();
+    // ======================
+    // SEO DESCRIPTION
+    // ======================
+    const description = cleanDescription(
+      post.meta_description || post.content || post.title,
+      160
+    );
 
     // ======================
-    // RELATED POSTS
+    // CLEAN CONTENT AMP
     // ======================
-    const related = posts
-      .filter(p => sanitizeSlug(p.slug) !== safeSlug)
-      .slice(0, 6);
+    const content = cleanAmpContent(post.content);
 
     // ======================
-    // SEO DATA
+    // RENDER AMP PAGE
     // ======================
-    const desc = cleanDescription(post.content || "", 160);
-    const read = readingTime(post.content || "");
-
-    const url = "/" + safeSlug;
-    const fullUrl = canonical(url);
-
-    const ogImage = "/og/" + safeSlug;
-
-    // ======================
-    // SIMPLE INTERNAL LINK
-    // ======================
-    let content = post.content || "";
-
-    related.forEach(p => {
-
-      const title = p.title || "";
-      if (!title) return;
-
-      const keyword = title.split(" ").slice(0, 2).join(" ");
-      if (keyword.length < 4) return;
-
-      const regex = new RegExp(`\\b${keyword}\\b`, "i");
-
-      content = content.replace(
-        regex,
-        `<a href="/${sanitizeSlug(p.slug)}">${keyword}</a>`
-      );
-
+    const html = renderAmp({
+      title: post.title,
+      description,
+      canonical: "/" + safeSlug,
+      content,
+      siteName: "AI MR DENNIS"
     });
 
-    // ======================
-    // SCHEMA BLOGPOSTING
-    // ======================
-    const schema = `
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "BlogPosting",
-  "headline": "${post.title}",
-  "description": "${desc}",
-  "image": "${ogImage}",
-  "mainEntityOfPage": "${fullUrl}",
-  "author": {
-    "@type": "Organization",
-    "name": "${SITE.name}"
-  },
-  "publisher": {
-    "@type": "Organization",
-    "name": "${SITE.name}"
+    return new Response(html, {
+      headers: {
+        "content-type": "text/html;charset=UTF-8",
+        "cache-control": "public,max-age=300"
+      }
+    });
+
+  } catch (err) {
+    return new Response("Error: " + err.message, { status: 500 });
   }
 }
-</script>
-`;
 
-    // ======================
-    // RELATED GRID
-    // ======================
-    const relatedGrid = related.map(p => `
-      <div class="card">
-        <a href="/${sanitizeSlug(p.slug)}">
-          <h4>${p.title}</h4>
-        </a>
-      </div>
-    `).join("");
-
-    // ======================
-    // RENDER OUTPUT
-    // ======================
-    return layout({
-      title: post.title,
-      description: desc,
-      canonical: fullUrl,
-      image: ogImage,
-      schema,
-
-      content: `
-        <link rel="amphtml" href="/amp/${safeSlug}">
-
-        <article class="post">
-
-          <h1>${post.title}</h1>
-
-          <p>⏱ ${read} min read</p>
-
-          <div class="post-content">
-            ${content}
-          </div>
-
-        </article>
-
-        <h3>Artikel Terkait</h3>
-
-        <div class="grid">
-          ${relatedGrid}
-        </div>
-      `
-    });
-
-  } catch (e) {
-    return new Response("Error: " + e.message, { status: 500 });
-  }
+// ======================
+// AMP CONTENT CLEANER
+// ======================
+function cleanAmpContent(html = "") {
+  return String(html)
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, "")
+    .replace(/on\w+="[^"]*"/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
