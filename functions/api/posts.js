@@ -1,61 +1,73 @@
 import { getPosts } from "../../lib/api";
-import { cached, cacheKey } from "../../lib/cache";
+import { cleanDescription } from "../../lib/config";
 
-export async function onRequest(context) {
-  const { env, request } = context;
+export async function onRequest({ request }) {
 
-  const url = new URL(request.url);
+const url=new URL(request.url);
 
-  const page = parseInt(url.searchParams.get("page")) || 1;
-  const limit = parseInt(url.searchParams.get("limit")) || 10;
-  const kategori = url.searchParams.get("kategori") || "";
+const page=parseInt(
+url.searchParams.get("page")||"1"
+);
 
-  const key = cacheKey("posts", `${kategori}:${page}:${limit}`);
+const limit=parseInt(
+url.searchParams.get("limit")||"20"
+);
 
-  const data = await cached(
-    env.KV,
-    key,
-    async () => {
+const q=(url.searchParams.get("q")||"")
+.toLowerCase();
 
-      let posts = await getPosts();
+let posts=await getPosts();
 
-      // ======================
-      // FILTER CATEGORY
-      // ======================
-      if (kategori) {
-        posts = posts.filter(
-          p => (p.kategori || "").toLowerCase() === kategori.toLowerCase()
-        );
-      }
+if(q){
+posts=posts.filter(p=>
+(p.title||"")
+.toLowerCase()
+.includes(q)
+);
+}
 
-      // ======================
-      // SORT (latest first)
-      // ======================
-      posts = posts.reverse();
+const total=posts.length;
+const totalPages=Math.ceil(total/limit);
 
-      // ======================
-      // PAGINATION
-      // ======================
-      const start = (page - 1) * limit;
-      const end = start + limit;
+const start=(page-1)*limit;
 
-      const paginated = posts.slice(start, end);
+const results=posts
+.slice(start,start+limit)
+.map(p=>({
+slug:p.slug,
+title:p.title,
+image:p.image||"",
+kategori:p.kategori||"",
+description:cleanDescription(
+p.meta_description||
+p.content||
+"",
+140
+),
+created:p.created||"",
+updated:p.updated||""
+}));
 
-      return {
-        page,
-        limit,
-        total: posts.length,
-        totalPage: Math.ceil(posts.length / limit),
-        data: paginated
-      };
-    },
-    300 // cache 5 menit
-  );
+return json({
+status:true,
+page,
+limit,
+total,
+totalPages,
+results
+});
 
-  return new Response(JSON.stringify(data), {
-    headers: {
-      "content-type": "application/json",
-      "cache-control": "public,max-age=60"
-    }
-  });
+}
+
+function json(data,status=200){
+return new Response(
+JSON.stringify(data),
+{
+status,
+headers:{
+"content-type":"application/json;charset=UTF-8",
+"cache-control":"public,max-age=300,s-maxage=600"
+}
+}
+);
 }
