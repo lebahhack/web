@@ -1,65 +1,47 @@
+import { renderAmp } from "../../lib/renderAmp";
 import { getPost } from "../../lib/api";
-import { renderAmpPage } from "../../lib/renderAmp";
-import { sanitizeSlug, cleanDescription } from "../../lib/config";
+import { sanitizeSlug, stripHTML } from "../../lib/config";
 
 export async function onRequest(context) {
-  const { slug } = context.params;
+  try {
 
-  const safeSlug = sanitizeSlug(slug);
+    let { slug } = context.params;
+    slug = sanitizeSlug(slug);
 
-  const post = await getPost(safeSlug);
+    const post = await getPost(slug);
 
-  if (!post) {
-    return new Response("404 Not Found", { status: 404 });
-  }
+    if (!post) {
+      return new Response("Not Found", { status: 404 });
+    }
 
-  // ======================
-  // DESCRIPTION (SEO SAFE)
-  // ======================
-  const description = cleanDescription(
-    post.meta_description ||
-    post.content ||
-    post.title,
-    160
-  );
+    const desc = stripHTML(post.content || "").slice(0, 160);
 
-  // ======================
-  // AMP CONTENT CLEAN
-  // ======================
-  const content = cleanAmpContent(post.content);
-
-  return new Response(
-    renderAmpPage({
+    const html = renderAmp({
       title: post.title,
-      description,
-      slug: safeSlug,
-      content,
-      image: post.image || ""
-    }),
-    {
+      description: desc,
+      canonical: "/" + slug,
+      siteName: "AI MR DENNIS",
+      content: `
+<div class="post">
+
+<h1>${post.title}</h1>
+
+<div class="post-content">
+${post.content}
+</div>
+
+</div>
+`
+    });
+
+    return new Response(html, {
       headers: {
         "content-type": "text/html;charset=UTF-8",
         "cache-control": "public,max-age=300"
       }
-    }
-  );
-}
+    });
 
-// ======================
-// AMP CONTENT CLEANER
-// ======================
-function cleanAmpContent(html = "") {
-  return String(html)
-
-    // remove script/style
-    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, "")
-
-    // optional: strip dangerous attributes
-    .replace(/on\w+="[^"]*"/g, "")
-
-    // fix spacing
-    .replace(/\s+/g, " ")
-
-    .trim();
+  } catch (e) {
+    return new Response("Error: " + e.message, { status: 500 });
+  }
 }
