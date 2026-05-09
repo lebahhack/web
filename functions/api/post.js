@@ -1,65 +1,68 @@
-import { getPost } from "../../lib/api";
-import { cached, cacheKey } from "../../lib/cache";
+import { getPost,getPosts } from "../../lib/api";
 
-export async function onRequest(context) {
-  const { env, request } = context;
+export async function onRequest({ request }) {
 
-  const url = new URL(request.url);
-  const slug = url.searchParams.get("slug");
+const url=new URL(request.url);
+const slug=url.searchParams.get("slug");
 
-  if (!slug) {
-    return new Response(
-      JSON.stringify({ error: "slug required" }),
-      {
-        status: 400,
-        headers: {
-          "content-type": "application/json"
-        }
-      }
-    );
-  }
+if(!slug){
+return json({
+status:false,
+message:"slug required"
+},400);
+}
 
-  const key = cacheKey("post", slug);
+const post=await getPost(slug);
 
-  const data = await cached(
-    env.KV,
-    key,
-    async () => {
+if(!post){
+return json({
+status:false,
+message:"post not found"
+},404);
+}
 
-      const post = await getPost(slug);
+const posts=await getPosts();
 
-      if (!post) {
-        return null;
-      }
+const related=posts
+.filter(p=>p.slug!==slug)
+.map(p=>({
+...p,
+score:getScore(post.title,p.title)
+}))
+.sort((a,b)=>b.score-a.score)
+.slice(0,6);
 
-      return {
-        title: post.title,
-        slug: post.slug,
-        kategori: post.kategori,
-        content: post.content,
-        image: post.image || "",
-        date: post.date || ""
-      };
-    },
-    600 // cache 10 menit (lebih lama karena single post)
-  );
+return json({
+status:true,
+post:{
+...post,
+related
+}
+});
 
-  if (!data) {
-    return new Response(
-      JSON.stringify({ error: "not found" }),
-      {
-        status: 404,
-        headers: {
-          "content-type": "application/json"
-        }
-      }
-    );
-  }
+}
 
-  return new Response(JSON.stringify(data), {
-    headers: {
-      "content-type": "application/json",
-      "cache-control": "public,max-age=120"
-    }
-  });
+function getScore(a="",b=""){
+let score=0;
+
+a.toLowerCase().split(" ").forEach(w=>{
+if(b.toLowerCase().includes(w)){
+score++;
+}
+});
+
+return score;
+}
+
+function json(data,status=200){
+return new Response(
+JSON.stringify(data),
+{
+status,
+headers:{
+"content-type":"application/json;charset=UTF-8",
+"cache-control":"public,max-age=300"
+}
+}
+);
 }
