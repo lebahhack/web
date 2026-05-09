@@ -1,6 +1,6 @@
-import { getPost } from "../lib/api";
-import { renderAmp } from "../lib/renderAmp";
-import { sanitizeSlug, cleanDescription } from "../lib/config";
+import { getPost } from "../../lib/api";
+import { renderAmp } from "../../lib/renderAmp";
+import { sanitizeSlug, cleanDescription } from "../../lib/config";
 
 export async function onRequest(context) {
   const { slug } = context.params;
