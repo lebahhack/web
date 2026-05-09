@@ -1,21 +1,49 @@
 import { getPost } from "../lib/api";
-import { sanitizeSlug, cleanDescription } from "../lib/config";
+import { renderTemplate } from "../lib/template";
+import {
+  sanitizeSlug,
+  cleanDescription,
+  SITE
+} from "../lib/config";
 
 export async function onRequest(context) {
-  const { slug } = context.params;
 
-  const post = await getPost(sanitizeSlug(slug));
+  const slug = sanitizeSlug(
+    context.params.slug
+  );
+
+  const post = await getPost(slug);
 
   if (!post) {
-    return new Response("404", { status: 404 });
+    return new Response("404", {
+      status: 404
+    });
   }
 
-  const description = cleanDescription(post.content, 160);
+  const html = renderTemplate({
+    amp: false,
 
-  return new Response(`
-    <h1>${post.title}</h1>
-    <p>${description}</p>
-  `, {
-    headers: { "content-type": "text/html" }
+    title: post.title,
+
+    description: cleanDescription(
+      post.content,
+      160
+    ),
+
+    canonical:
+      SITE.url + "/" + post.slug,
+
+    content: post.content,
+
+    image: post.image || "",
+
+    siteName: SITE.name
+  });
+
+  return new Response(html, {
+    headers: {
+      "content-type":
+        "text/html;charset=UTF-8"
+    }
   });
 }
