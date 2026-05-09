@@ -1,47 +1,61 @@
-import { renderAmp } from "../../lib/renderAmp";
 import { getPost } from "../../lib/api";
-import { sanitizeSlug, stripHTML } from "../../lib/config";
+import { renderAmp } from "../../lib/renderAmp";
+import { sanitizeSlug, cleanDescription } from "../../lib/config";
 
 export async function onRequest(context) {
-  try {
 
-    let { slug } = context.params;
-    slug = sanitizeSlug(slug);
+  const { slug } = context.params;
 
-    const post = await getPost(slug);
+  const safeSlug = sanitizeSlug(slug);
 
-    if (!post) {
-      return new Response("Not Found", { status: 404 });
-    }
+  const post = await getPost(safeSlug);
 
-    const desc = stripHTML(post.content || "").slice(0, 160);
-
-    const html = renderAmp({
-      title: post.title,
-      description: desc,
-      canonical: "/" + slug,
-      siteName: "AI MR DENNIS",
-      content: `
-<div class="post">
-
-<h1>${post.title}</h1>
-
-<div class="post-content">
-${post.content}
-</div>
-
-</div>
-`
-    });
-
-    return new Response(html, {
-      headers: {
-        "content-type": "text/html;charset=UTF-8",
-        "cache-control": "public,max-age=300"
-      }
-    });
-
-  } catch (e) {
-    return new Response("Error: " + e.message, { status: 500 });
+  if (!post) {
+    return new Response("404 Not Found", { status: 404 });
   }
+
+  // ======================
+  // SEO DESCRIPTION
+  // ======================
+  const description = cleanDescription(
+    post.meta_description ||
+    post.content ||
+    post.title,
+    160
+  );
+
+  // ======================
+  // AMP CLEAN CONTENT
+  // ======================
+  const content = cleanAmpContent(post.content);
+
+  // ======================
+  // RENDER AMP
+  // ======================
+  const html = renderAmp({
+    title: post.title,
+    description,
+    canonical: "/" + safeSlug,
+    content,
+    siteName: "AI MR DENNIS"
+  });
+
+  return new Response(html, {
+    headers: {
+      "content-type": "text/html;charset=UTF-8",
+      "cache-control": "public,max-age=300"
+    }
+  });
+}
+
+// ======================
+// AMP CLEANER
+// ======================
+function cleanAmpContent(html = "") {
+  return String(html)
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, "")
+    .replace(/on\w+="[^"]*"/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
