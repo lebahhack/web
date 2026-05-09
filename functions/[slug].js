@@ -1,49 +1,101 @@
-import { getPost } from "../lib/api";
+import { getPost,getPosts } from "../lib/api";
 import { renderTemplate } from "../lib/template";
-import {
-  sanitizeSlug,
-  cleanDescription,
-  SITE
-} from "../lib/config";
+import { SITE,sanitizeSlug,cleanDescription } from "../lib/config";
 
-export async function onRequest(context) {
+export async function onRequest({ params }) {
 
-  const slug = sanitizeSlug(
-    context.params.slug
-  );
+const slug=sanitizeSlug(params.slug);
 
-  const post = await getPost(slug);
+const post=await getPost(slug);
 
-  if (!post) {
-    return new Response("404", {
-      status: 404
-    });
-  }
+if(!post){
+return new Response(
+"404 Not Found",
+{ status:404 }
+);
+}
 
-  const html = renderTemplate({
-    amp: false,
+const posts=await getPosts();
 
-    title: post.title,
+const related=posts
+.filter(p=>p.slug!==slug)
+.map(p=>({
+...p,
+score:getScore(post.title,p.title)
+}))
+.sort((a,b)=>b.score-a.score)
+.slice(0,8);
 
-    description: cleanDescription(
-      post.content,
-      160
-    ),
+const description=cleanDescription(
+post.meta_description||
+post.content||
+post.title,
+160
+);
 
-    canonical:
-      SITE.url + "/" + post.slug,
+const image=post.image||SITE.logo;
 
-    content: post.content,
+const jsonld={
+"@context":"https://schema.org",
+"@type":"Article",
+headline:post.title,
+description,
+image:[image],
+author:{
+"@type":"Organization",
+name:SITE.name
+},
+publisher:{
+"@type":"Organization",
+name:SITE.name,
+logo:{
+"@type":"ImageObject",
+url:SITE.logo
+}
+},
+mainEntityOfPage:`${SITE.url}/${slug}`,
+datePublished:post.created||new Date().toISOString(),
+dateModified:post.updated||post.created||new Date().toISOString()
+};
 
-    image: post.image || "",
+return new Response(
+renderTemplate({
+site:SITE,
+slug,
+title:post.title,
+description,
+content:post.content||"",
+image,
+posts:related,
+jsonld
+}),
+{
+headers:{
+"content-type":"text/html;charset=UTF-8",
+"cache-control":"public,max-age=300,s-maxage=600"
+}
+}
+);
 
-    siteName: SITE.name
-  });
+}
 
-  return new Response(html, {
-    headers: {
-      "content-type":
-        "text/html;charset=UTF-8"
-    }
-  });
+function getScore(a="",b=""){
+
+let score=0;
+
+a.toLowerCase()
+.split(" ")
+.forEach(w=>{
+
+if(
+b.toLowerCase()
+.includes(w)
+){
+score++;
+}
+
+});
+
+return score;
+
 }
