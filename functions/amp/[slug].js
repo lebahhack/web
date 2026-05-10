@@ -2,9 +2,6 @@ import { renderAmp } from "../../lib/renderAmp";
 import { getPost } from "../../lib/api";
 import { SITE } from "../../lib/config";
 
-// ======================
-// AMP POST PAGE
-// ======================
 export async function onRequest(context) {
   try {
 
@@ -17,9 +14,6 @@ export async function onRequest(context) {
       return new Response("Not Found", { status: 404 });
     }
 
-    // ======================
-    // SAFE DATA
-    // ======================
     const title = post.title || SITE.name;
 
     const description =
@@ -35,9 +29,6 @@ export async function onRequest(context) {
 
     const canonical = SITE.domain + "/" + slug;
 
-    // ======================
-    // AMP SEO SCHEMA
-    // ======================
     const schema = `<script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -45,30 +36,49 @@ export async function onRequest(context) {
   "headline": "${escapeHTML(title)}",
   "description": "${escapeHTML(description)}",
   "image": "${escapeHTML(image)}",
-  "url": "${canonical}",
-  "author": {
-    "@type": "Organization",
-    "name": "${SITE.name}"
-  },
-  "publisher": {
-    "@type": "Organization",
-    "name": "${SITE.name}",
-    "logo": {
-      "@type": "ImageObject",
-      "url": "${SITE.domain}/logo.png"
-    }
-  }
+  "url": "${canonical}"
 }
 </script>`;
 
-    // ======================
-    // AMP CONTENT
-    // ======================
     const content = `
 <article class="amp-post">
 
 <h1>${escapeHTML(title)}</h1>
 
-<amp-img 
-  src="${image}" 
- 
+<amp-img
+  src="${image}"
+  width="800"
+  height="450"
+  layout="responsive"
+  alt="${escapeHTML(title)}">
+</amp-img>
+
+<div class="content">
+${post.content || ""}
+</div>
+
+</article>
+`;
+
+    return renderAmp({
+      title,
+      description,
+      image,
+      canonical,
+      schema,
+      content
+    });
+
+  } catch (e) {
+    return new Response("Error: " + e.message, { status: 500 });
+  }
+}
+
+function escapeHTML(str = "") {
+  return String(str).replace(/[&<>"]/g, c => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;"
+  }[c]));
+}
