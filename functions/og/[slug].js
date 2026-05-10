@@ -1,68 +1,59 @@
 import { getPost } from "../../lib/api";
 import { sanitizeSlug } from "../../lib/config";
 
+
 export async function onRequest(context) {
+
   const { slug } = context.params;
 
-  const safeSlug = sanitizeSlug(decodeURIComponent(slug));
+  const safeSlug = sanitizeSlug(slug);
 
-  let post = await getPost(safeSlug);
+  const post = await getPost(safeSlug);
 
-  // ======================
-  // NORMALIZE API RESPONSE
-  // ======================
-  post = post?.data || post?.post || post || {};
-
-  if (!post || !post.title) {
+  if (!post) {
     return new Response("Not found", { status: 404 });
   }
 
-  const title = escapeHTML(post.title);
-  const kategori = escapeHTML(post.kategori || "Blog");
+  const title = escapeHTML(post.title || "Artikel");
+  const kategori = escapeHTML(post.kategori || "");
 
-  const description =
-    post.meta_description ||
-    post.content ||
-    "";
-
+  // ======================
+  // SIMPLE SVG OG IMAGE
+  // ======================
   const svg = `
-<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+  <svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="g" x1="0" x2="1">
+        <stop offset="0%" stop-color="#4f46e5"/>
+        <stop offset="100%" stop-color="#0f172a"/>
+      </linearGradient>
+    </defs>
 
-  <defs>
-    <linearGradient id="g" x1="0" x2="1">
-      <stop offset="0%" stop-color="#4f46e5"/>
-      <stop offset="100%" stop-color="#0f172a"/>
-    </linearGradient>
-  </defs>
+    <rect width="1200" height="630" fill="url(#g)"/>
 
-  <rect width="1200" height="630" fill="url(#g)"/>
+    <text x="60" y="200"
+      font-size="48"
+      fill="white"
+      font-family="Arial"
+      font-weight="bold">
+      ${truncate(title, 70)}
+    </text>
 
-  <!-- TITLE -->
-  <text x="60" y="200"
-    font-size="52"
-    fill="white"
-    font-family="Arial"
-    font-weight="bold">
-    ${truncate(title, 60)}
-  </text>
+    <text x="60" y="300"
+      font-size="28"
+      fill="#cbd5e1"
+      font-family="Arial">
+      ${kategori}
+    </text>
 
-  <!-- CATEGORY -->
-  <text x="60" y="280"
-    font-size="28"
-    fill="#cbd5e1"
-    font-family="Arial">
-    ${kategori}
-  </text>
+    <text x="60" y="500"
+      font-size="22"
+      fill="#94a3b8"
+      font-family="Arial">
+      ${truncate(post.description || "", 100)}
+    </text>
 
-  <!-- DESCRIPTION -->
-  <text x="60" y="420"
-    font-size="22"
-    fill="#94a3b8"
-    font-family="Arial">
-    ${truncate(description, 120)}
-  </text>
-
-</svg>`;
+  </svg>`;
 
   return new Response(svg, {
     headers: {
