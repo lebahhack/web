@@ -50,9 +50,7 @@ posts
 .filter(p=>
 
 p.slug!==slug &&
-
-p.kategori===
-post.kategori
+p.kategori===post.kategori
 
 )
 .slice(0,6);
@@ -77,11 +75,6 @@ published:post.created,
 updated:post.updated,
 kategori:post.kategori
 });
-
-const content=
-formatAmpContent(
-post.content
-);
 
 return renderAmp({
 
@@ -130,7 +123,7 @@ ${post.title}
 </p>
 
 <div class="post-content">
-${content}
+${formatAmpContent(post.content)}
 </div>
 
 </article>
@@ -196,9 +189,9 @@ return String(html)
 
 .replace(
 /<img([^>]*)src="([^"]+)"([^>]*)>/gi,
-`
+(_,a,src,b)=>`
 <amp-img
-src="$2"
+src="${src}"
 width="1200"
 height="630"
 layout="responsive">
