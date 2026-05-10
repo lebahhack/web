@@ -1,41 +1,90 @@
 import { layout } from "../lib/render";
 import { getPosts } from "../lib/api";
-import { SITE,canonical,sanitizeSlug,cardImage } from "../lib/config";
+import {
+SITE,
+canonical,
+sanitizeSlug,
+cardImage,
+ogImage
+} from "../lib/config";
+import { seo } from "../lib/seo";
+import { withCache } from "../lib/cache";
 
 export async function onRequest(context){
+
+return withCache(
+context,
+300,
+async()=>{
+
 try{
 
-const url=new URL(context.request.url);
-const page=parseInt(url.searchParams.get("page"))||1;
+const reqUrl=
+new URL(
+context.request.url
+);
 
-const robots=page>1
+const page=
+parseInt(
+reqUrl.searchParams.get("page")
+)||1;
+
+const posts=
+await getPosts();
+
+const perPage=12;
+
+const totalPage=
+Math.ceil(
+posts.length/perPage
+);
+
+const start=
+(page-1)*perPage;
+
+const currentPosts=
+posts.slice(
+start,
+start+perPage
+);
+
+const grid=
+currentPosts.map(p=>`
+<div class="card">
+<a href="/${sanitizeSlug(p.slug)}">
+${cardImage(
+ogImage(p.slug),
+p.title
+)}
+<h3>${p.title}</h3>
+</a>
+</div>
+`).join("");
+
+const robots=
+page>1
 ?'<meta name="robots" content="noindex,follow">'
 :"";
 
-const posts=await getPosts();
-
-const perPage=12;
-const totalPage=Math.ceil(posts.length/perPage);
-
-const start=(page-1)*perPage;
-const currentPosts=posts.slice(start,start+perPage);
-
-const grid=currentPosts.map(p=>`
-<article class="card">
-<a href="/${sanitizeSlug(p.slug)}">
-${cardImage(`/og/${sanitizeSlug(p.slug)}`,p.title)}
-<h3>${p.title}</h3>
-</a>
-</article>
-`).join("");
-
 return layout({
+
 title:SITE.name,
+
 description:SITE.description,
-canonical:canonical(page>1?"/?page="+page:"/"),
+
+canonical:canonical(
+page>1
+?"/?page="+page
+:"/"
+),
 
 schema:`
 ${robots}
+
+${seo({
+title:SITE.name,
+description:SITE.description
+})}
 
 <script type="application/ld+json">
 {
@@ -45,7 +94,7 @@ ${robots}
 "url":"${SITE.domain}",
 "potentialAction":{
 "@type":"SearchAction",
-"target":"${SITE.domain}/?q={search_term_string}",
+"target":"${SITE.domain}/api/search?q={search_term_string}",
 "query-input":"required name=search_term_string"
 }
 }
@@ -55,15 +104,23 @@ ${robots}
 content:`
 
 <section class="hero">
-<h1>${SITE.name}</h1>
-<p>${SITE.description}</p>
+<h1>
+${SITE.name}
+</h1>
+<p>
+${SITE.description}
+</p>
 </section>
 
 <section class="seo-box">
-<h2>Artikel SEO & Teknologi</h2>
+<h2>
+Artikel SEO & Teknologi
+</h2>
 <p>
-Tutorial SEO, AI content, blogging, digital marketing,
-dan teknologi terbaru dengan loading cepat dan SEO modern.
+Tutorial SEO, AI, blogging,
+dan teknologi modern
+dengan performa cepat
+dan struktur SEO optimal.
 </p>
 </section>
 
@@ -71,12 +128,11 @@ dan teknologi terbaru dengan loading cepat dan SEO modern.
 class="search"
 type="search"
 placeholder="Cari artikel..."
-autocomplete="off"
 >
 
 <div id="results"></div>
 
-<h2 class="section-title">
+<h2>
 Artikel Terbaru
 </h2>
 
@@ -84,49 +140,81 @@ Artikel Terbaru
 ${grid}
 </div>
 
-${pagination(page,totalPage)}
+${pagination(
+page,
+totalPage
+)}
 
 ${searchScript()}
+
 `
+
 });
 
 }catch(e){
 
 return new Response(
 "Error: "+e.message,
-{status:500}
+{ status:500 }
 );
 
 }
+
+}
+);
+
 }
 
-function pagination(current,total){
+function pagination(
+current,
+total
+){
 
-if(total<=1) return "";
+if(total<=1){
+return "";
+}
 
-let html=`<nav class="pagination">`;
+let html=
+`<div class="pagination">`;
 
-const group=Math.floor((current-1)/5);
+const group=
+Math.floor(
+(current-1)/5
+);
 
-const start=group*5+1;
+const start=
+group*5+1;
 
-const end=Math.min(start+4,total);
+const end=
+Math.min(
+start+4,
+total
+);
 
 if(start>1){
+
 html+=`
 <a href="/?page=${start-1}">
 «
 </a>
 `;
+
 }
 
-for(let i=start;i<=end;i++){
+for(
+let i=start;
+i<=end;
+i++
+){
 
 html+=`
 <a
 href="/?page=${i}"
-class="${i===current?"active":""}"
->
+class="${
+i===current
+?"active"
+:""
+}">
 ${i}
 </a>
 `;
@@ -134,16 +222,19 @@ ${i}
 }
 
 if(end<total){
+
 html+=`
 <a href="/?page=${end+1}">
 »
 </a>
 `;
+
 }
 
-html+=`</nav>`;
+html+=`</div>`;
 
 return html;
+
 }
 
 function searchScript(){
@@ -151,50 +242,67 @@ function searchScript(){
 return `
 <script>
 
-const input=document.querySelector(".search");
+const input=
+document.querySelector(".search");
 
-const results=document.getElementById("results");
+const results=
+document.getElementById("results");
 
 let timer;
 
-input?.addEventListener("input",e=>{
+input?.addEventListener(
+"input",
+e=>{
 
 clearTimeout(timer);
 
-timer=setTimeout(async()=>{
+timer=setTimeout(
+async()=>{
 
-const q=e.target.value.trim();
+const q=
+e.target.value.trim();
 
 if(q.length<2){
+
 results.innerHTML="";
 return;
+
 }
 
 try{
 
-const res=await fetch(
-"/api/search?q="+encodeURIComponent(q)
+const res=
+await fetch(
+"/api/search?q="+
+encodeURIComponent(q)
 );
 
-const data=await res.json();
+const data=
+await res.json();
 
-results.innerHTML=data.map(d=>\`
+results.innerHTML=
+data.map(d=>\`
 <a
 class="search-item"
-href="/\${d.slug}"
->
+href="/\${d.slug}">
 \${d.title}
 </a>
 \`).join("");
 
 }catch{
+
 results.innerHTML="";
+
 }
 
-},300);
+},
+300
+);
 
-});
+}
+);
 
 </script>
 `;
+
 }
