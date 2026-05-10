@@ -1,27 +1,74 @@
-import { getPost } from "../../lib/api";
 import { renderAmp } from "../../lib/renderAmp";
-import { sanitizeSlug, cleanDescription } from "../../lib/config";
+import { getPost } from "../../lib/api";
+import { SITE } from "../../lib/config";
 
+// ======================
+// AMP POST PAGE
+// ======================
 export async function onRequest(context) {
-  const { slug } = context.params;
+  try {
 
-  const post = await getPost(sanitizeSlug(slug));
+    const url = new URL(context.request.url);
+    const slug = url.pathname.replace("/amp/", "");
 
-  if (!post) {
-    return new Response("404", { status: 404 });
-  }
+    const post = await getPost(slug);
 
-  return new Response(
-    renderAmp({
-      title: post.title,
-      description: cleanDescription(post.content, 160),
-      canonical: "/" + slug,
-      content: post.content
-    }),
-    {
-      headers: {
-        "content-type": "text/html;charset=UTF-8"
-      }
+    if (!post) {
+      return new Response("Not Found", { status: 404 });
     }
-  );
+
+    // ======================
+    // SAFE DATA
+    // ======================
+    const title = post.title || SITE.name;
+
+    const description =
+      post.meta_description ||
+      post.description ||
+      post.content?.slice(0, 160) ||
+      SITE.description;
+
+    const image =
+      post.og_image ||
+      post.image ||
+      SITE.domain + "/og/default.jpg";
+
+    const canonical = SITE.domain + "/" + slug;
+
+    // ======================
+    // AMP SEO SCHEMA
+    // ======================
+    const schema = `<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "${escapeHTML(title)}",
+  "description": "${escapeHTML(description)}",
+  "image": "${escapeHTML(image)}",
+  "url": "${canonical}",
+  "author": {
+    "@type": "Organization",
+    "name": "${SITE.name}"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "${SITE.name}",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "${SITE.domain}/logo.png"
+    }
+  }
 }
+</script>`;
+
+    // ======================
+    // AMP CONTENT
+    // ======================
+    const content = `
+<article class="amp-post">
+
+<h1>${escapeHTML(title)}</h1>
+
+<amp-img 
+  src="${image}" 
+ 
