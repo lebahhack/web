@@ -1,59 +1,48 @@
 import { renderAmp } from "../../lib/renderAmp";
-import { getPosts,getPost } from "../../lib/api";
-import { withCache } from "../../lib/cache";
-import { seo } from "../../lib/seo";
+import { getPosts } from "../../lib/api";
+import {
+SITE,
+canonical,
+amphtml,
+sanitizeSlug,
+ogImage,
+cardImage
+} from "../../lib/config";
 
 export async function onRequest(context){
 
-return withCache(
-context,
-300,
-async()=>{
-
 try{
 
-const reqUrl=
-new URL(
-context.request.url
-);
+const url=new URL(context.request.url);
 
-const page=
-parseInt(
-reqUrl.searchParams.get("page")
+const page=parseInt(
+url.searchParams.get("page")
 )||1;
 
-const posts=
-await getPosts();
+const posts=await getPosts();
 
 const perPage=12;
 
-const totalPage=
-Math.ceil(
+const totalPage=Math.ceil(
 posts.length/perPage
 );
 
-const start=
-(page-1)*perPage;
+const start=(page-1)*perPage;
 
-const currentPosts=
-posts.slice(
+const currentPosts=posts.slice(
 start,
 start+perPage
 );
 
-const grid=
-currentPosts.map(p=>`
+const grid=currentPosts.map(p=>`
 <div class="card">
 
-<a href="/amp/${sanitizeSlug(p.slug)}">
+<a href="/${sanitizeSlug(p.slug)}">
 
-<amp-img
-src="${ogImage(p.slug)}"
-width="400"
-height="210"
-layout="responsive"
-alt="${p.title}">
-</amp-img>
+${cardImage(
+ogImage(p.slug),
+p.title
+)}
 
 <h3>
 ${p.title}
@@ -64,87 +53,70 @@ ${p.title}
 </div>
 `).join("");
 
-return renderAmp({
+const html=`
 
-title:SITE.name,
-
-description:SITE.description,
-
-canonical:canonical(
-page>1
-?"/?page="+page
-:"/"
-),
-
-content:`
-
-<section class="hero">
+<div class="hero">
 
 <h1>
 ${SITE.name}
 </h1>
 
 <p>
-${SITE.description}
+Artikel terbaru SEO dan teknologi
 </p>
 
-</section>
-
-<h2>
-Artikel Terbaru
-</h2>
+</div>
 
 <div class="grid">
 ${grid}
 </div>
 
-${pagination(
-page,
-totalPage
-)}
+${pagination(page,totalPage)}
 
+`;
+
+return renderAmp({
+title:SITE.name,
+description:SITE.description,
+canonical:canonical("/"),
+amp:amphtml("/"),
+content:html,
+schema:`
+<script type="application/ld+json">
+{
+"@context":"https://schema.org",
+"@type":"WebSite",
+"name":"${SITE.name}",
+"url":"${SITE.domain}"
+}
+</script>
 `
-
 });
 
 }catch(e){
 
 return new Response(
 "AMP Error: "+e.message,
-{
-status:500
-}
+{status:500}
 );
 
 }
 
 }
-);
 
-}
+function pagination(current,total){
 
-function pagination(
-current,
-total
-){
+if(total<=1) return "";
 
-if(total<=1){
-return "";
-}
+let html=`<div class="pagination">`;
 
-let html=
-'<div class="pagination">';
-
-const group=
-Math.floor(
+const group=Math.floor(
 (current-1)/5
 );
 
-const start=
-group*5+1;
+const start=group*5+1;
 
-const end=
-Math.min(
+const end=Math.min(
 start+4,
 total
 );
@@ -159,19 +131,13 @@ html+=`
 
 }
 
-for(
-let i=start;
-i<=end;
-i++
-){
+for(let i=start;i<=end;i++){
 
 html+=`
 <a
 href="/amp?page=${i}"
 class="${
-i===current
-?"active"
-:""
+i===current?"active":""
 }">
 ${i}
 </a>
@@ -189,7 +155,7 @@ html+=`
 
 }
 
-html+='</div>';
+html+=`</div>`;
 
 return html;
 
