@@ -1,195 +1,104 @@
 import { renderAmp } from "../../lib/renderAmp";
-import { getPosts,getPost } from "../../lib/api";
-import { withCache } from "../../lib/cache";
-import { seo } from "../../lib/seo";
+import { getPost,getPosts } from "../../lib/api";
+import {
+SITE,
+canonical,
+amphtml,
+ogImage,
+stripHTML,
+cleanDescription,
+postImage,
+readingTime
+} from "../../lib/config";
 
 export async function onRequest(context){
 
-return withCache(
-context,
-300,
-async()=>{
-
 try{
 
-let { slug }=
-context.params;
+const slug=context.params.slug;
 
-slug=
-sanitizeSlug(slug);
-
-const post=
-await getPost(slug);
+const post=await getPost(slug);
 
 if(!post){
-
-return new Response(
-"404 Not Found",
-{ status:404 }
-);
-
+return new Response("Not Found",{status:404});
 }
 
-const posts=
-await getPosts();
+const posts=await getPosts();
 
-const related=
-posts
-.filter(p=>
-
-p.slug!==slug &&
-p.kategori===post.kategori
-
-)
+const related=posts
+.filter(p=>p.slug!==post.slug)
 .slice(0,6);
 
-const desc=
-cleanDescription(
-stripHTML(post.content)
-.slice(0,160)
-);
+let desc=stripHTML(post.content).slice(0,160);
+desc=cleanDescription(desc);
 
-const read=
-readingTime(
-post.content
-);
+const html=`
+<article>
 
-const schema=
-seo({
-title:post.title,
-description:desc,
-slug,
-published:post.created,
-updated:post.updated,
-kategori:post.kategori
-});
+<h1>${post.title}</h1>
 
-return renderAmp({
-
-title:post.title,
-
-description:desc,
-
-canonical:canonical(
-"/"+slug
-),
-
-schema,
-
-content:`
-
-<nav class="breadcrumb">
-
-<a href="/amp">
-Home
-</a>
-
-›
-
-<span>
-${post.title}
-</span>
-
-</nav>
-
-<article class="post">
-
-<amp-img
-src="${ogImage(slug)}"
-width="1200"
-height="630"
-layout="responsive"
-alt="${post.title}">
-</amp-img>
-
-<h1>
-${post.title}
-</h1>
+${postImage(
+ogImage(post.slug),
+post.title
+)}
 
 <p>
-⏱ ${read} min read
+${readingTime(post.content)} min read
 </p>
 
-<div class="post-content">
-${formatAmpContent(post.content)}
+<div>
+${post.content}
 </div>
+
+${related.length?`
+<h2>Artikel Terkait</h2>
+
+<ul>
+${related.map(p=>`
+<li>
+<a href="/${p.slug}">
+${p.title}
+</a>
+</li>
+`).join("")}
+</ul>
+`:""}
 
 </article>
+`;
 
-<h3>
-Artikel Terkait
-</h3>
-
-<div class="grid">
-
-${related.map(p=>`
-<div class="card">
-
-<a href="/amp/${p.slug}">
-
-<amp-img
-src="${ogImage(p.slug)}"
-width="400"
-height="210"
-layout="responsive"
-alt="${p.title}">
-</amp-img>
-
-<h4>
-${p.title}
-</h4>
-
-</a>
-
-</div>
-`).join("")}
-
-</div>
-
+return renderAmp({
+title:post.title,
+description:desc,
+canonical:canonical("/"+post.slug),
+amp:amphtml("/"+post.slug),
+image:ogImage(post.slug),
+content:html,
+schema:`
+<script type="application/ld+json">
+{
+"@context":"https://schema.org",
+"@type":"BlogPosting",
+"headline":${JSON.stringify(post.title)},
+"description":${JSON.stringify(desc)},
+"url":"${canonical("/"+post.slug)}",
+"image":"${ogImage(post.slug)}",
+"publisher":{
+"@type":"Organization",
+"name":"${SITE.name}"
+}
+}
+</script>
 `
-
 });
 
 }catch(e){
 
 return new Response(
 "AMP Error: "+e.message,
-{
-status:500
-}
+{status:500}
 );
 
 }
-
-}
-);
-
-}
-
-// ======================
-// FORMAT HTML TO AMP
-// ======================
-function formatAmpContent(
-html=""
-){
-
-return String(html)
-
-.replace(
-/<img([^>]*)src="([^"]+)"([^>]*)>/gi,
-(_,a,src,b)=>`
-<amp-img
-src="${src}"
-width="1200"
-height="630"
-layout="responsive">
-</amp-img>
-`
-)
-
-.replace(
-/<iframe[\s\S]*?<\/iframe>/gi,
-""
-);
 
 }
