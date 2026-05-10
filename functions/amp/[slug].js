@@ -1,19 +1,7 @@
-import { renderAmp } from "../../../lib/renderAmp";
-import {
-SITE,
-canonical,
-sanitizeSlug,
-ogImage,
-stripHTML,
-cleanDescription,
-readingTime
-} from "../../../lib/config";
-import {
-getPost,
-getPosts
-} from "../../../lib/api";
-import { seo } from "../../../lib/seo";
-import { withCache } from "../../../lib/cache";
+import { renderAmp } from "../../lib/renderAmp";
+import { getPosts,getPost } from "../../lib/api";
+import { withCache } from "../../lib/cache";
+import { seo } from "../../lib/seo";
 
 export async function onRequest(context){
 
