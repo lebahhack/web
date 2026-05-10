@@ -1,75 +1,105 @@
 import { layout } from "../lib/render";
 import { getPosts } from "../lib/api";
-import { canonical, sanitizeSlug, cleanDescription } from "../lib/config";
+import { SITE } from "../lib/config";
+import { sanitizeSlug } from "../lib/config";
 
+// ======================
+// HOMEPAGE
+// ======================
 export async function onRequest(context) {
-  const { request } = context;
+  try {
 
-  const url = new URL(request.url);
-  const page = parseInt(url.searchParams.get("page")) || 1;
+    const url = new URL(context.request.url);
+    const page = parseInt(url.searchParams.get("page")) || 1;
 
-  const perPage = 12;
+    const posts = await getPosts();
 
-  const posts = await getPosts();
+    // ======================
+    // PAGINATION CONFIG
+    // ======================
+    const perPage = 12;
+    const totalPage = Math.ceil(posts.length / perPage);
 
-  // ======================
-  // SORT (NEWEST FIRST)
-  // ======================
-  const sorted = posts.reverse();
+    const start = (page - 1) * perPage;
+    const currentPosts = posts.slice(start, start + perPage);
 
-  // ======================
-  // PAGINATION
-  // ======================
-  const start = (page - 1) * perPage;
-  const end = start + perPage;
+    // ======================
+    // GRID POSTS
+    // ======================
+    const grid = currentPosts.map(post => {
+      const slug = sanitizeSlug(post.slug);
 
-  const current = sorted.slice(start, end);
+      const img = post.image || SITE.domain + "/og/default.jpg";
 
-  const totalPage = Math.ceil(sorted.length / perPage);
+      return `
+      <div class="card">
+        <a href="/${slug}">
+          <img loading="lazy" src="${img}" alt="${escapeHTML(post.title)}">
+          <h3>${escapeHTML(post.title)}</h3>
+        </a>
+      </div>
+      `;
+    }).join("");
 
-  // ======================
-  // GRID HTML
-  // ======================
-  const grid = current.map(p => `
-    <div class="card">
-      <a href="/${sanitizeSlug(p.kategori)}/${sanitizeSlug(p.slug)}">
-        <img src="/og/${sanitizeSlug(p.slug)}" alt="${p.title}" loading="lazy">
-        <h3>${p.title}</h3>
-      </a>
-    </div>
-  `).join("");
+    // ======================
+    // HOMEPAGE SEO
+    // ======================
+    const title = SITE.name;
+    const description = SITE.description;
 
-  // ======================
-  // DESCRIPTION SEO
-  // ======================
-  const description = cleanDescription(
-    "Portal artikel SEO, teknologi, dan tutorial modern Indonesia. Update artikel terbaru setiap hari."
-  );
-
-  // ======================
-  // RENDER PAGE
-  // ======================
-  return layout({
-    title: "Beranda - LebahHack",
-    description,
-    canonical: page > 1
+    const canonical = page > 1
       ? "/?page=" + page
-      : "/",
-    content: `
-      <div class="hero">
-        <h1>LebahHack</h1>
-        <p>Artikel SEO • Teknologi • Tutorial • Insight Digital</p>
-      </div>
+      : "/";
 
-      <h2>Artikel Terbaru</h2>
+    const image = SITE.domain + "/og/home.jpg";
 
-      <div class="grid">
-        ${grid}
-      </div>
+    const schema = `<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "${SITE.name}",
+  "url": "${SITE.domain}",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": "${SITE.domain}/search?q={search_term_string}",
+    "query-input": "required name=search_term_string"
+  }
+}
+</script>`;
 
-      ${pagination(page, totalPage)}
-    `
-  });
+    // ======================
+    // CONTENT HOMEPAGE
+    // ======================
+    const content = `
+<div class="hero">
+  <h1>${SITE.name}</h1>
+  <p>${SITE.description}</p>
+</div>
+
+<h2>Artikel Terbaru</h2>
+
+<div class="grid">
+  ${grid}
+</div>
+
+${pagination(page, totalPage)}
+`;
+
+    // ======================
+    // RENDER
+    // ======================
+    return layout({
+      title,
+      description,
+      canonical,
+      image,
+      schema,
+      content
+    });
+
+  } catch (e) {
+    return new Response("Error: " + e.message, { status: 500 });
+  }
 }
 
 // ======================
@@ -80,26 +110,34 @@ function pagination(current, total) {
 
   let html = `<div class="pagination">`;
 
-  const start = Math.max(1, current - 2);
-  const end = Math.min(total, current + 2);
+  const group = Math.floor((current - 1) / 5);
+  const start = group * 5 + 1;
+  const end = Math.min(start + 4, total);
 
-  if (current > 1) {
-    html += `<a href="/?page=${current - 1}">« Prev</a>`;
+  if (start > 1) {
+    html += `<a href="/?page=${start - 1}">«</a>`;
   }
 
   for (let i = start; i <= end; i++) {
-    html += `
-      <a href="/?page=${i}" class="${i === current ? "active" : ""}">
-        ${i}
-      </a>
-    `;
+    html += `<a href="/?page=${i}" class="${i === current ? "active" : ""}">${i}</a>`;
   }
 
-  if (current < total) {
-    html += `<a href="/?page=${current + 1}">Next »</a>`;
+  if (end < total) {
+    html += `<a href="/?page=${end + 1}">»</a>`;
   }
 
   html += `</div>`;
-
   return html;
+}
+
+// ======================
+// SAFE HTML
+// ======================
+function escapeHTML(str = "") {
+  return String(str).replace(/[&<>"]/g, c => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;"
+  }[c]));
 }
