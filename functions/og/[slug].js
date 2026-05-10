@@ -1,80 +1,86 @@
 import { getPost } from "../../lib/api";
-import { sanitizeSlug } from "../../lib/config";
+import { sanitizeSlug, SITE } from "../../lib/config";
 
 export async function onRequest(context) {
-
   const { slug } = context.params;
 
-  const safeSlug = sanitizeSlug(slug);
+  const cleanSlug = sanitizeSlug(slug);
+  const post = await getPost(cleanSlug);
 
-  const post = await getPost(safeSlug);
+  const title = post?.title || "Artikel";
+  const subtitle = post?.meta_description || "Baca artikel terbaru";
 
-  if (!post) {
-    return new Response("Not found", { status: 404 });
-  }
+  const width = 1200;
+  const height = 630;
 
-  const title = escapeHTML(post.title || "Artikel");
-  const kategori = escapeHTML(post.kategori || "");
+  const canvas = new OffscreenCanvas(width, height);
+  const ctx = canvas.getContext("2d");
 
   // ======================
-  // SIMPLE SVG OG IMAGE
+  // BACKGROUND
   // ======================
-  const svg = `
-  <svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="g" x1="0" x2="1">
-        <stop offset="0%" stop-color="#4f46e5"/>
-        <stop offset="100%" stop-color="#0f172a"/>
-      </linearGradient>
-    </defs>
+  ctx.fillStyle = "#0b0b0b";
+  ctx.fillRect(0, 0, width, height);
 
-    <rect width="1200" height="630" fill="url(#g)"/>
+  // ======================
+  // BORDER ACCENT
+  // ======================
+  ctx.strokeStyle = "#ff2a00";
+  ctx.lineWidth = 10;
+  ctx.strokeRect(0, 0, width, height);
 
-    <text x="60" y="200"
-      font-size="48"
-      fill="white"
-      font-family="Arial"
-      font-weight="bold">
-      ${truncate(title, 70)}
-    </text>
+  // ======================
+  // TITLE
+  // ======================
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 60px Arial";
 
-    <text x="60" y="300"
-      font-size="28"
-      fill="#cbd5e1"
-      font-family="Arial">
-      ${kategori}
-    </text>
+  wrapText(ctx, title, 80, 200, 1000, 70);
 
-    <text x="60" y="500"
-      font-size="22"
-      fill="#94a3b8"
-      font-family="Arial">
-      ${truncate(post.description || "", 100)}
-    </text>
+  // ======================
+  // SUBTITLE
+  // ======================
+  ctx.fillStyle = "#cccccc";
+  ctx.font = "30px Arial";
+  ctx.fillText(subtitle, 80, 500);
 
-  </svg>`;
+  // ======================
+  // BRAND
+  // ======================
+  ctx.fillStyle = "#ffcc00";
+  ctx.font = "bold 28px Arial";
+  ctx.fillText(SITE.name, 80, 580);
 
-  return new Response(svg, {
+  const png = await canvas.convertToBlob();
+
+  return new Response(png, {
     headers: {
-      "content-type": "image/svg+xml",
+      "content-type": "image/png",
       "cache-control": "public,max-age=86400"
     }
   });
 }
 
 // ======================
-// HELPERS
+// TEXT WRAP HELPER
 // ======================
-function escapeHTML(str = "") {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(" ");
+  let line = "";
 
-function truncate(str = "", len = 60) {
-  return String(str).length > len
-    ? String(str).slice(0, len) + "..."
-    : String(str);
+  for (let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + " ";
+    const metrics = ctx.measureText(testLine);
+    const testWidth = metrics.width;
+
+    if (testWidth > maxWidth && n > 0) {
+      ctx.fillText(line, x, y);
+      line = words[n] + " ";
+      y += lineHeight;
+    } else {
+      line = testLine;
+    }
+  }
+
+  ctx.fillText(line, x, y);
 }
