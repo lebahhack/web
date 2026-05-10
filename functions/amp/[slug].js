@@ -1,49 +1,74 @@
-import { renderAmp } from "../../lib/renderAmp";
 import { getPost } from "../../lib/api";
-import { SITE } from "../../lib/config";
+import { renderAmp } from "../../lib/renderAmp";
+import { sanitizeSlug, cleanDescription, SITE } from "../../lib/config";
 
 export async function onRequest(context) {
-  try {
+  const { slug } = context.params;
 
-    const url = new URL(context.request.url);
-    const slug = url.pathname.replace("/amp/", "");
+  const cleanSlug = sanitizeSlug(slug);
+  const post = await getPost(cleanSlug);
 
-    const post = await getPost(slug);
+  if (!post) {
+    return new Response("404 Not Found", { status: 404 });
+  }
 
-    if (!post) {
-      return new Response("Not Found", { status: 404 });
-    }
+  // ======================
+  // SEO CORE DATA
+  // ======================
+  const title = post.title || SITE.name;
 
-    const title = post.title || SITE.name;
+  const description =
+    post.meta_description ||
+    cleanDescription(post.content, 160) ||
+    SITE.description;
 
-    const description =
-      post.meta_description ||
-      post.description ||
-      post.content?.slice(0, 160) ||
-      SITE.description;
+  const image =
+    post.og_image ||
+    post.image ||
+    SITE.domain + "/og/default.jpg";
 
-    const image =
-      post.og_image ||
-      post.image ||
-      SITE.domain + "/og/default.jpg";
+  const canonical = `${SITE.domain}/${cleanSlug}`;
 
-    const canonical = SITE.domain + "/" + slug;
-
-    const schema = `<script type="application/ld+json">
+  // ======================
+  // FULL SEO SCHEMA (BLOGPOST)
+  // ======================
+  const schema = `<script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "BlogPosting",
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "${canonical}"
+  },
   "headline": "${escapeHTML(title)}",
   "description": "${escapeHTML(description)}",
   "image": "${escapeHTML(image)}",
-  "url": "${canonical}"
+  "author": {
+    "@type": "Organization",
+    "name": "${SITE.name}"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "${SITE.name}",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "${SITE.domain}/logo.png"
+    }
+  },
+  "datePublished": "${post.date || new Date().toISOString()}",
+  "dateModified": "${post.updated_at || post.date || new Date().toISOString()}"
 }
 </script>`;
 
-    const content = `
+  // ======================
+  // AMP CONTENT
+  // ======================
+  const content = `
 <article class="amp-post">
 
 <h1>${escapeHTML(title)}</h1>
+
+<p class="desc">${escapeHTML(description)}</p>
 
 <amp-img
   src="${image}"
@@ -60,20 +85,22 @@ ${post.content || ""}
 </article>
 `;
 
-    return renderAmp({
-      title,
-      description,
-      image,
-      canonical,
-      schema,
-      content
-    });
-
-  } catch (e) {
-    return new Response("Error: " + e.message, { status: 500 });
-  }
+  // ======================
+  // RENDER AMP
+  // ======================
+  return renderAmp({
+    title,
+    description,
+    canonical,
+    image,
+    schema,
+    content
+  });
 }
 
+// ======================
+// SAFE HTML
+// ======================
 function escapeHTML(str = "") {
   return String(str).replace(/[&<>"]/g, c => ({
     "&": "&amp;",
