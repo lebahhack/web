@@ -14,7 +14,16 @@ export async function onRequest(context) {
     return new Response("Not found", { status: 404 });
   }
 
-  const title = escapeHTML(post.title || "Artikel");
+  const realPost =
+  post?.data?.post ||
+  post?.data ||
+  post?.post ||
+  post ||
+  {};
+
+const title = realPost.title || formatSlug(safeSlug) || "Artikel";
+
+  
   const kategori = escapeHTML(post.kategori || "");
 
   // ======================
