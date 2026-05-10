@@ -36,7 +36,7 @@ export async function onRequest(context) {
       fill="white"
       font-family="Arial"
       font-weight="bold">
-      ${truncate(title, 70)}
+      ${truncate(title, 70)} - ${escapeHTML(title)}
     </text>
 
     <text x="60" y="300"
