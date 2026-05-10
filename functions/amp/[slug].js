@@ -12,24 +12,14 @@ export async function onRequest(context) {
     return new Response("404", { status: 404 });
   }
 
-  const title = post.title || SITE.name;
-
-  const description =
-    post.meta_description ||
-    cleanDescription(post.content, 160) ||
-    SITE.description;
-
-  const image =
-    post.image ||
-    post.og_image ||
-    SITE.domain + "/og/default.jpg";
-
   return new Response(
     renderAmp({
-      title,
-      description,
-      image,
-      canonical: SITE.domain + "/" + cleanSlug,
+      title: post.title || SITE.name,
+      description:
+        post.meta_description ||
+        cleanDescription(post.content, 160),
+      image: post.image || post.og_image,
+      canonical: `${SITE.domain}/${cleanSlug}`,
       content: post.content || ""
     }),
     {
