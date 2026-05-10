@@ -1,12 +1,12 @@
-import { renderAmp } from "../../../lib/renderAmp";
-import { getPosts } from "../../../lib/api";
+import { renderAmp } from "../../lib/renderAmp";
+import { getPosts } from "../../lib/api";
 import {
 SITE,
 canonical,
 sanitizeSlug,
 ogImage
-} from "../../../lib/config";
-import { withCache } from "../../../lib/cache";
+} from "../../lib/config";
+import { withCache } from "../../lib/cache";
 
 export async function onRequest(context){
 
@@ -49,6 +49,7 @@ start+perPage
 const grid=
 currentPosts.map(p=>`
 <div class="card">
+
 <a href="/amp/${sanitizeSlug(p.slug)}">
 
 <amp-img
@@ -64,6 +65,7 @@ ${p.title}
 </h3>
 
 </a>
+
 </div>
 `).join("");
 
@@ -136,7 +138,7 @@ return "";
 }
 
 let html=
-`<div class="pagination">`;
+'<div class="pagination">';
 
 const group=
 Math.floor(
@@ -192,7 +194,7 @@ html+=`
 
 }
 
-html+=`</div>`;
+html+='</div>';
 
 return html;
 
