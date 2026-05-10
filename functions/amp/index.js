@@ -1,12 +1,12 @@
-import { renderAmp } from "../../lib/renderAmp";
-import { getPosts } from "../../lib/api";
+import { renderAmp } from "../../../lib/renderAmp";
+import { getPosts } from "../../../lib/api";
 import {
 SITE,
 canonical,
 sanitizeSlug,
 ogImage
-} from "../../lib/config";
-import { withCache } from "../../lib/cache";
+} from "../../../lib/config";
+import { withCache } from "../../../lib/cache";
 
 export async function onRequest(context){
 
