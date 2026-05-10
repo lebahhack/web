@@ -72,8 +72,12 @@ export async function onRequest(context) {
     // ======================
     const content = `
 <div class="hero">
-  <h1>${SITE.name}</h1>
+  <h1>🚀 ${SITE.name}</h1>
   <p>${SITE.description}</p>
+
+  <div class="hero-search">
+    <input class="search" placeholder="Cari artikel SEO, tutorial..." />
+  </div>
 </div>
 
 <h2>Artikel Terbaru</h2>
