@@ -9,7 +9,8 @@ stripHTML,
 readingTime,
 cleanDescription,
 postImage,
-cardImage
+cardImage,
+escapeHTML
 } from "../lib/config";
 import { seo } from "../lib/seo";
 import { withCache } from "../lib/cache";
@@ -45,7 +46,7 @@ await getPosts();
 const related=
 posts
 .filter(p=>
-p.slug!==slug &&
+sanitizeSlug(p.slug)!==slug &&
 p.kategori===post.kategori
 )
 .slice(0,6);
