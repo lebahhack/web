@@ -51,20 +51,10 @@ p.kategori===post.kategori
 )
 .slice(0,6);
 
-const linkedContent =
+const linkedContent=
 autoLink(
 post.content,
 related
-);
-
-const tocData =
-generateTOC(
-linkedContent
-);
-
-const faqSchema =
-generateFAQSchema(
-tocData.content
 );
 
 const read=
@@ -122,17 +112,14 @@ canonical:url,
 
 image:og,
 
-schema:
-seo({
+schema:seo({
 title:post.title,
 description:desc,
 slug,
 kategori:post.kategori,
 published:post.created,
 updated:post.updated
-})
-+
-faqSchema,
+}),
 
 content:`
 
@@ -154,11 +141,7 @@ ${post.title}
 </p>
 
 <div class="post-content">
-
-${tocData.toc}
-
-${tocData.content}
-
+${linkedContent}
 </div>
 
 <div class="post-tags">
@@ -200,58 +183,77 @@ content="",
 related=[]
 ){
 
-let used=
-new Set();
+let total = 0;
 
-let total=0;
+const MAX = 8;
 
-const MAX=5;
+const used = new Set();
+
+const parser = related.map(p=>{
+
+const title =
+stripHTML(p.title);
+
+const slug =
+sanitizeSlug(p.slug);
+
+const words = title
+.toLowerCase()
+.split(" ")
+.filter(w=>w.length > 3);
+
+const keyword = words
+.slice(0,3)
+.join(" ");
+
+return {
+title,
+slug,
+keyword
+};
+
+});
 
 return content.replace(
-/(<a[^>]*>.*?<\/a>)|>([^<]+)</gi,
+/(<a[^>]*>.*?<\/a>)|>([^<]+)</gis,
 (match,link,text)=>{
 
 if(link){
 return link;
 }
 
-let result=text;
+let result = text;
 
-for(const p of related){
+for(const item of parser){
 
-if(total>=MAX){
+if(total >= MAX){
 break;
 }
 
-const keyword=
-p.title
-.split(" ")
-.slice(0,2)
-.join(" ")
-.toLowerCase();
-
 if(
-!keyword ||
-used.has(keyword)
+!item.keyword ||
+used.has(item.keyword)
 ){
 continue;
 }
 
-const regex=
+const regex =
 new RegExp(
-`\\b${escapeRegex(keyword)}\\b`,
+`\\b${escapeRegex(item.keyword)}\\b`,
 "i"
 );
 
 if(regex.test(result)){
 
-result=
+result =
 result.replace(
 regex,
-`<a href="/${p.slug}">${keyword}</a>`
+`<a href="/${item.slug}">
+${item.keyword}
+</a>`
 );
 
-used.add(keyword);
+used.add(item.keyword);
 
 total++;
 
@@ -259,12 +261,13 @@ total++;
 
 }
 
-return ">"+result+"<";
+return ">" + result + "<";
 
 }
 );
 
 }
+
 
 function escapeRegex(str=""){
 
@@ -274,140 +277,3 @@ return str.replace(
 );
 
 }
-
-
-
-function generateTOC(html=""){
-
-const headings = [];
-
-const content = html.replace(
-/<h2>(.*?)<\/h2>/gi,
-(match,title)=>{
-
-const clean =
-stripHTML(title);
-
-const id =
-sanitizeSlug(clean);
-
-headings.push({
-id,
-title:clean
-});
-
-return `
-<h2 id="${id}">
-${title}
-</h2>
-`;
-
-}
-);
-
-if(!headings.length){
-
-return {
-toc:"",
-content
-};
-
-}
-
-const toc = `
-
-<div class="toc">
-
-<div class="toc-title">
-Daftar Isi
-</div>
-
-<ul>
-
-${headings.map(h=>`
-<li>
-<a href="#${h.id}">
-${escapeHTML(h.title)}
-</a>
-</li>
-`).join("")}
-
-</ul>
-
-</div>
-
-`;
-
-return {
-toc,
-content
-};
-
-}
-
-function generateFAQSchema(html=""){
-
-const faq = [];
-
-const regex =
-/<h2.*?>(.*?)<\/h2>\s*<p>(.*?)<\/p>/gis;
-
-let match;
-
-while(
-(match = regex.exec(html)) !== null
-){
-
-const question =
-stripHTML(match[1]).trim();
-
-const answer =
-stripHTML(match[2]).trim();
-
-if(
-question.length > 8 &&
-answer.length > 20
-){
-
-faq.push({
-question,
-answer
-});
-
-}
-
-}
-
-if(!faq.length){
-return "";
-}
-
-return `
-
-<script type="application/ld+json">
-
-{
-"@context":"https://schema.org",
-"@type":"FAQPage",
-"mainEntity":[
-
-${faq.map(f=>`
-{
-"@type":"Question",
-"name":${JSON.stringify(f.question)},
-"acceptedAnswer":{
-"@type":"Answer",
-"text":${JSON.stringify(f.answer)}
-}
-}
-`).join(",")}
-
-]
-}
-
-</script>
-
-`;
-
-}
-
