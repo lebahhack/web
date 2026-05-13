@@ -326,7 +326,7 @@ content
 
 const toc = `
 
-<details class="toc" open>
+<details class="toc">
 
 <summary class="toc-title">
 📑 Daftar Isi
