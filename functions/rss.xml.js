@@ -11,33 +11,38 @@ export async function onRequest(context){
 
 return withCache(
 context,
-3600,
+1800,
 async()=>{
 
 try{
 
-const posts=
-await getPosts();
+const posts =
+(await getPosts())
+.slice(0,50);
 
-const items=
-posts
-.slice(0,20)
-.map(p=>{
+const items = posts.map(p=>{
 
-const slug=
+const slug =
 sanitizeSlug(p.slug);
 
-const desc=
-stripHTML(p.content)
-.slice(0,200);
+const kategori =
+p.kategori || "artikel";
 
-const pubDate=
+const desc =
+escapeHTML(
+stripHTML(p.content)
+.slice(0,300)
+);
+
+const date =
 new Date(
-p.created||
+p.updated ||
+p.created ||
 Date.now()
 ).toUTCString();
 
 return `
+
 <item>
 
 <title>
@@ -52,26 +57,29 @@ ${SITE.domain}/${slug}
 ${SITE.domain}/${slug}
 </guid>
 
+<pubDate>
+${date}
+</pubDate>
+
+<category>
+${escapeHTML(kategori)}
+</category>
+
 <description>
 <![CDATA[
 ${desc}
 ]]>
 </description>
 
-<pubDate>
-${pubDate}
-</pubDate>
-
 </item>
+
 `;
 
-})
-.join("");
+}).join("");
 
-const xml=`<?xml version="1.0" encoding="UTF-8"?>
+const xml = `<?xml version="1.0" encoding="UTF-8"?>
 
-<rss
-version="2.0">
+<rss version="2.0">
 
 <channel>
 
@@ -108,7 +116,7 @@ headers:{
 "content-type":
 "application/xml;charset=UTF-8",
 "cache-control":
-"public,max-age=3600"
+"public,max-age=1800"
 }
 }
 );
