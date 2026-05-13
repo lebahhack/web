@@ -13,6 +13,13 @@ try{
 
 const { kategori } = context.params;
 
+const urlObj = new URL(context.request.url);
+
+const page =
+parseInt(urlObj.searchParams.get("page")) || 1;
+
+const perPage = 24;
+
 const posts = await getPosts();
 
 const filtered = posts.filter(
@@ -26,7 +33,16 @@ return new Response(
 );
 }
 
-const items = filtered.slice(0,24).map(p=>`
+const totalPage =
+Math.ceil(filtered.length / perPage);
+
+const start =
+(page - 1) * perPage;
+
+const currentPosts =
+filtered.slice(start,start + perPage);
+
+const items = currentPosts.map(p=>`
 <a class="card" href="/amp/${sanitizeSlug(p.slug)}">
 
 <amp-img
@@ -42,6 +58,42 @@ alt="${escapeHTML(p.title)}">
 </a>
 `).join("");
 
+let pagination = "";
+
+if(totalPage > 1){
+
+pagination += `<div class="pagination">`;
+
+if(page > 1){
+
+pagination += `
+<a href="/amp/kategori/${sanitizeSlug(kategori)}?page=${page-1}">
+← Prev
+</a>
+`;
+
+}
+
+pagination += `
+<span class="page-info">
+Page ${page} / ${totalPage}
+</span>
+`;
+
+if(page < totalPage){
+
+pagination += `
+<a href="/amp/kategori/${sanitizeSlug(kategori)}?page=${page+1}">
+Next →
+</a>
+`;
+
+}
+
+pagination += `</div>`;
+
+}
+
 return renderAmp({
 
 title:
@@ -52,27 +104,48 @@ description:
 
 canonical:
 canonical(
-`/kategori/${sanitizeSlug(kategori)}`
+`/kategori/${sanitizeSlug(kategori)}${
+page > 1 ? `?page=${page}` : ""
+}`
 ),
+
+schema:`
+<script type="application/ld+json">
+{
+"@context":"https://schema.org",
+"@type":"CollectionPage",
+"name":"${escapeHTML(kategori)}",
+"url":"${canonical(`/kategori/${sanitizeSlug(kategori)}`)}"
+}
+</script>
+`,
 
 content:`
 
 <div class="hero">
 <h1>${escapeHTML(kategori)}</h1>
-<p>${filtered.length} artikel AMP tersedia</p>
+<p>${filtered.length} artikel tersedia</p>
 </div>
 
 <div class="grid">
 ${items}
 </div>
 
+${pagination}
+
 <div class="section">
-<h2>Tentang ${escapeHTML(kategori)}</h2>
+
+<h2>
+Tentang ${escapeHTML(kategori)}
+</h2>
+
 <p>
-Kumpulan artikel terbaru kategori
+Kumpulan artikel kategori
 ${escapeHTML(kategori)}
-yang ringan, cepat, dan SEO friendly.
+ringan, cepat, mobile friendly,
+dan SEO optimized.
 </p>
+
 </div>
 
 `
