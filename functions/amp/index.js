@@ -242,10 +242,19 @@ overflow:hidden;
 transition:.2s;
 }
 
-.thumb img{
-width:100%;
+.thumb{
 aspect-ratio:16/9;
-object-fit:cover;
+background:#111827;
+display:flex;
+align-items:center;
+justify-content:center;
+overflow:hidden;
+}
+
+.thumb img{
+max-width:100%;
+max-height:100%;
+object-fit:contain;
 }
 
 .body{
