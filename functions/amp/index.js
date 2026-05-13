@@ -36,34 +36,40 @@ start+perPage
 );
 
 const grid=currentPosts.map(p=>`
-<article class="card">
+<div class="card">
 
 <a href="/${sanitizeSlug(p.slug)}">
 
 <div class="thumb">
+
 ${cardImage(
 ogImage(p.slug),
 p.title
 )}
+
 </div>
 
 <div class="body">
 
 <span class="badge">
+
 ${escapeHTML(
 p.kategori || "ARTIKEL"
 )}
+
 </span>
 
 <h3>
+
 ${escapeHTML(p.title)}
+
 </h3>
 
 </div>
 
 </a>
 
-</article>
+</div>
 `).join("");
 
 const html=`
