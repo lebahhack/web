@@ -177,15 +177,16 @@ font-weight="700">
 
 <!-- BRAND -->
 <text
-x="160"
-y="150"
+x="1140"
+y="90"
+text-anchor="end"
 fill="#ffffff"
-font-size="38"
+font-size="34"
 font-family="Inter,Arial,sans-serif"
 font-weight="800"
 opacity=".95">
 
-⚡ ${escapeXML(SITE.name)}
+LEBAHHACK ⚡ ${escapeXML(SITE.name)}
 
 </text>
 
