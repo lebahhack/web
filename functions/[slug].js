@@ -335,7 +335,7 @@ const toc = `
 </span>
 
 <span class="toc-toggle">
-Buka
+
 </span>
 
 </summary>
