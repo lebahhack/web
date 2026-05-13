@@ -55,20 +55,32 @@ currentPosts.map(p=>`
 
 <a href="/${sanitizeSlug(p.slug)}">
 
-<div class="badge">
-${escapeHTML(
-p.kategori || "ARTIKEL"
-)}
-</div>
+<div class="thumb">
 
 ${cardImage(
 ogImage(p.slug),
 p.title
 )}
 
+</div>
+
+<div class="body">
+
+<span class="badge">
+
+${escapeHTML(
+p.kategori || "ARTIKEL"
+)}
+
+</span>
+
 <h3>
+
 ${escapeHTML(p.title)}
+
 </h3>
+
+</div>
 
 </a>
 
