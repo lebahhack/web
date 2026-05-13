@@ -177,7 +177,7 @@ font-weight="700">
 
 <!-- BRAND -->
 <text
-x="60"
+x="160"
 y="150"
 fill="#ffffff"
 font-size="38"
