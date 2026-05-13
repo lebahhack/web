@@ -50,10 +50,11 @@ stripHTML(post.content)
 desc =
 cleanDescription(desc);
 
-const content =
-String(post.content)
+const rawContent =
+String(post.content);
 
-.replace(
+const content =
+rawContent.replace(
 /<img([^>]+?)src="([^"]+)"([^>]*)>/gi,
 `
 <amp-img
@@ -64,6 +65,9 @@ layout="responsive">
 </amp-img>
 `
 );
+
+const tocData =
+generateTOC(content);
 
 const html = `
 
@@ -106,7 +110,11 @@ alt="${escapeHTML(post.title)}">
 </p>
 
 <div class="post-content">
-${content}
+
+${tocData.toc}
+
+${tocData.content}
+
 </div>
 
 <div class="post-tags">
@@ -189,5 +197,80 @@ return new Response(
 );
 
 }
+
+}
+
+function generateTOC(html=""){
+
+const headings = [];
+
+const content = html.replace(
+/<h2>(.*?)<\/h2>/gi,
+(match,title)=>{
+
+const clean =
+stripHTML(title);
+
+const id =
+sanitizeSlug(clean);
+
+headings.push({
+id,
+title:clean
+});
+
+return `
+<h2 id="${id}">
+${title}
+</h2>
+`;
+
+}
+);
+
+if(!headings.length){
+
+return {
+toc:"",
+content
+};
+
+}
+
+const toc = `
+
+<details class="toc">
+
+<summary class="toc-title">
+
+<span>
+📑 Daftar Isi
+</span>
+
+<span class="toc-toggle">
+</span>
+
+</summary>
+
+<ul>
+
+${headings.map(h=>`
+<li>
+<a href="#${h.id}">
+${escapeHTML(h.title)}
+</a>
+</li>
+`).join("")}
+
+</ul>
+
+</details>
+
+`;
+
+return {
+toc,
+content
+};
 
 }
