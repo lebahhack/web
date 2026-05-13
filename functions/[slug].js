@@ -329,7 +329,15 @@ const toc = `
 <details class="toc">
 
 <summary class="toc-title">
+
+<span>
 📑 Daftar Isi
+</span>
+
+<span class="toc-toggle">
+Buka
+</span>
+
 </summary>
 
 <ul>
