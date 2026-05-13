@@ -74,8 +74,17 @@ ogImage(slug);
 
 const breadcrumb=`
 <nav class="breadcrumb">
-<a href="/">Home</a> ›
-<span>${post.title}</span>
+<a href="/">
+Home
+</a>
+<span>›</span>
+<a href="/kategori/${sanitizeSlug(post.kategori)}">
+${escapeHTML(post.kategori)}
+</a>
+<span>›</span>
+<span>
+${escapeHTML(post.title)}
+</span>
 </nav>
 `;
 
@@ -132,6 +141,12 @@ ${post.title}
 
 <div class="post-content">
 ${linkedContent}
+</div>
+
+<div class="post-tags">
+<a href="/kategori/${sanitizeSlug(post.kategori)}">
+#${escapeHTML(post.kategori)}
+</a>
 </div>
 
 </article>
