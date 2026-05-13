@@ -6,7 +6,8 @@ canonical,
 amphtml,
 sanitizeSlug,
 ogImage,
-cardImage
+cardImage,
+escapeHTML
 } from "../../lib/config";
 
 export async function onRequest(context){
@@ -49,11 +50,13 @@ p.title
 <div class="body">
 
 <span class="badge">
-ARTIKEL
+${escapeHTML(
+p.kategori || "ARTIKEL"
+)}
 </span>
 
 <h3>
-${p.title}
+${escapeHTML(p.title)}
 </h3>
 
 </div>
