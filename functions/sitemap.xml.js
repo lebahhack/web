@@ -14,17 +14,17 @@ async()=>{
 
 try{
 
-const posts=
+const posts =
 await getPosts();
 
-const used=
-new Set();
+const used = new Set();
 
-const urls=
-posts
+const kategoriSet = new Set();
+
+const urls = posts
 .filter(p=>{
 
-const slug=
+const slug =
 sanitizeSlug(p.slug);
 
 if(
@@ -36,20 +36,27 @@ return false;
 
 used.add(slug);
 
+if(p.kategori){
+kategoriSet.add(
+sanitizeSlug(p.kategori)
+);
+}
+
 return true;
 
 })
 .map(p=>{
 
-const slug=
+const slug =
 sanitizeSlug(p.slug);
 
-const updated=
-p.updated||
-p.created||
+const updated =
+p.updated ||
+p.created ||
 new Date().toISOString();
 
 return `
+
 <url>
 <loc>
 ${SITE.domain}/${slug}
@@ -64,12 +71,59 @@ daily
 0.8
 </priority>
 </url>
+
+<url>
+<loc>
+${SITE.domain}/amp/${slug}
+</loc>
+<lastmod>
+${updated}
+</lastmod>
+<changefreq>
+daily
+</changefreq>
+<priority>
+0.5
+</priority>
+</url>
+
 `;
 
 })
 .join("");
 
-const xml=`<?xml version="1.0" encoding="UTF-8"?>
+const kategoriUrls =
+[...kategoriSet]
+.map(k=>`
+
+<url>
+<loc>
+${SITE.domain}/kategori/${k}
+</loc>
+<changefreq>
+daily
+</changefreq>
+<priority>
+0.7
+</priority>
+</url>
+
+<url>
+<loc>
+${SITE.domain}/amp/kategori/${k}
+</loc>
+<changefreq>
+daily
+</changefreq>
+<priority>
+0.4
+</priority>
+</url>
+
+`)
+.join("");
+
+const xml = `<?xml version="1.0" encoding="UTF-8"?>
 
 <urlset
 xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -79,6 +133,14 @@ xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <changefreq>hourly</changefreq>
 <priority>1.0</priority>
 </url>
+
+<url>
+<loc>${SITE.domain}/amp</loc>
+<changefreq>hourly</changefreq>
+<priority>0.6</priority>
+</url>
+
+${kategoriUrls}
 
 ${urls}
 
