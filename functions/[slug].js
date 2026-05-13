@@ -57,6 +57,11 @@ post.content,
 related
 );
 
+const tocData =
+generateTOC(
+linkedContent
+);
+
 const read=
 readingTime(linkedContent);
 
@@ -141,7 +146,11 @@ ${post.title}
 </p>
 
 <div class="post-content">
-${linkedContent}
+
+${tocData.toc}
+
+${tocData.content}
+
 </div>
 
 <div class="post-tags">
@@ -275,5 +284,73 @@ return str.replace(
 /[.*+?^${}()|[\]\\]/g,
 "\\$&"
 );
+
+}
+
+function generateTOC(html=""){
+
+const headings = [];
+
+const content = html.replace(
+/<h2>(.*?)<\/h2>/gi,
+(match,title)=>{
+
+const clean =
+stripHTML(title);
+
+const id =
+sanitizeSlug(clean);
+
+headings.push({
+id,
+title:clean
+});
+
+return `
+<h2 id="${id}">
+${title}
+</h2>
+`;
+
+}
+);
+
+if(!headings.length){
+
+return {
+toc:"",
+content
+};
+
+}
+
+const toc = `
+
+<div class="toc">
+
+<div class="toc-title">
+Daftar Isi
+</div>
+
+<ul>
+
+${headings.map(h=>`
+<li>
+<a href="#${h.id}">
+${escapeHTML(h.title)}
+</a>
+</li>
+`).join("")}
+
+</ul>
+
+</div>
+
+`;
+
+return {
+toc,
+content
+};
 
 }
