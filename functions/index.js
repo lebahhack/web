@@ -121,7 +121,7 @@ Update aplikasi penghasil uang, AI modern, platform auto cuan, tips saldo digita
 </p>
 </section>
 
-<div id="results">
+
 <input
 class="search"
 type="search"
@@ -129,7 +129,7 @@ placeholder="Cari artikel..."
 >
 
 <div id="results"></div>
-</div>
+
 <h2>
 Artikel Terbaru
 </h2>
