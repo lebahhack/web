@@ -326,11 +326,11 @@ content
 
 const toc = `
 
-<div class="toc">
+<details class="toc" open>
 
-<div class="toc-title">
-Daftar Isi
-</div>
+<summary class="toc-title">
+📑 Daftar Isi
+</summary>
 
 <ul>
 
@@ -344,7 +344,7 @@ ${escapeHTML(h.title)}
 
 </ul>
 
-</div>
+</details>
 
 `;
 
