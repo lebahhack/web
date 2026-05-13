@@ -176,15 +176,27 @@ font-weight="700">
 </text>
 
 <!-- BRAND -->
+<!-- BRAND BG -->
+<rect
+x="760"
+y="40"
+width="380"
+height="60"
+rx="18"
+fill="rgba(255,255,255,.08)"
+stroke="rgba(255,255,255,.12)"
+stroke-width="1"
+/>
+
+<!-- BRAND -->
 <text
-x="1140"
-y="90"
+x="1120"
+y="79"
 text-anchor="end"
 fill="#ffffff"
-font-size="34"
+font-size="30"
 font-family="Inter,Arial,sans-serif"
-font-weight="800"
-opacity=".95">
+font-weight="800">
 
 LEBAHHACK ⚡ ${escapeXML(SITE.name)}
 
