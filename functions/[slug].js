@@ -51,10 +51,20 @@ p.kategori===post.kategori
 )
 .slice(0,6);
 
-const linkedContent=
+const linkedContent =
 autoLink(
 post.content,
 related
+);
+
+const tocData =
+generateTOC(
+linkedContent
+);
+
+const faqSchema =
+generateFAQSchema(
+tocData.content
 );
 
 const read=
@@ -112,14 +122,17 @@ canonical:url,
 
 image:og,
 
-schema:seo({
+schema:
+seo({
 title:post.title,
 description:desc,
 slug,
 kategori:post.kategori,
 published:post.created,
 updated:post.updated
-}),
+})
++
+faqSchema,
 
 content:`
 
@@ -141,7 +154,11 @@ ${post.title}
 </p>
 
 <div class="post-content">
-${linkedContent}
+
+${tocData.toc}
+
+${tocData.content}
+
 </div>
 
 <div class="post-tags">
@@ -257,3 +274,140 @@ return str.replace(
 );
 
 }
+
+
+
+function generateTOC(html=""){
+
+const headings = [];
+
+const content = html.replace(
+/<h2>(.*?)<\/h2>/gi,
+(match,title)=>{
+
+const clean =
+stripHTML(title);
+
+const id =
+sanitizeSlug(clean);
+
+headings.push({
+id,
+title:clean
+});
+
+return `
+<h2 id="${id}">
+${title}
+</h2>
+`;
+
+}
+);
+
+if(!headings.length){
+
+return {
+toc:"",
+content
+};
+
+}
+
+const toc = `
+
+<div class="toc">
+
+<div class="toc-title">
+Daftar Isi
+</div>
+
+<ul>
+
+${headings.map(h=>`
+<li>
+<a href="#${h.id}">
+${escapeHTML(h.title)}
+</a>
+</li>
+`).join("")}
+
+</ul>
+
+</div>
+
+`;
+
+return {
+toc,
+content
+};
+
+}
+
+function generateFAQSchema(html=""){
+
+const faq = [];
+
+const regex =
+/<h2.*?>(.*?)<\/h2>\s*<p>(.*?)<\/p>/gis;
+
+let match;
+
+while(
+(match = regex.exec(html)) !== null
+){
+
+const question =
+stripHTML(match[1]).trim();
+
+const answer =
+stripHTML(match[2]).trim();
+
+if(
+question.length > 8 &&
+answer.length > 20
+){
+
+faq.push({
+question,
+answer
+});
+
+}
+
+}
+
+if(!faq.length){
+return "";
+}
+
+return `
+
+<script type="application/ld+json">
+
+{
+"@context":"https://schema.org",
+"@type":"FAQPage",
+"mainEntity":[
+
+${faq.map(f=>`
+{
+"@type":"Question",
+"name":${JSON.stringify(f.question)},
+"acceptedAnswer":{
+"@type":"Answer",
+"text":${JSON.stringify(f.answer)}
+}
+}
+`).join(",")}
+
+]
+}
+
+</script>
+
+`;
+
+}
+
