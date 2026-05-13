@@ -5,7 +5,8 @@ SITE,
 canonical,
 sanitizeSlug,
 cardImage,
-ogImage
+ogImage,
+escapeHTML
 } from "../lib/config";
 import { seo } from "../lib/seo";
 import { withCache } from "../lib/cache";
@@ -51,13 +52,26 @@ start+perPage
 const grid=
 currentPosts.map(p=>`
 <div class="card">
+
 <a href="/${sanitizeSlug(p.slug)}">
+
+<div class="badge">
+${escapeHTML(
+p.kategori || "ARTIKEL"
+)}
+</div>
+
 ${cardImage(
 ogImage(p.slug),
 p.title
 )}
-<h3>${p.title}</h3>
+
+<h3>
+${escapeHTML(p.title)}
+</h3>
+
 </a>
+
 </div>
 `).join("");
 
