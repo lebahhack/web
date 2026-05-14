@@ -1,115 +1,69 @@
 import { renderAmp } from "../../../lib/renderAmp";
 import { getPosts } from "../../../lib/api";
-import {
-SITE,
-canonical,
-sanitizeSlug,
-escapeHTML
-} from "../../../lib/config";
+import { SITE, canonical, sanitizeSlug, escapeHTML } from "../../../lib/config";
 
 export async function onRequest(context){
+	try{
+		const { kategori }=context.params;
 
-try{
+		const urlObj=new URL(context.request.url);
 
-const { kategori } = context.params;
+		const page=parseInt(urlObj.searchParams.get("page"))||1;
 
-const urlObj = new URL(context.request.url);
+		const perPage=24;
 
-const page =
-parseInt(urlObj.searchParams.get("page")) || 1;
+		const posts=await getPosts();
 
-const perPage = 24;
+		const filtered=posts.filter(
+			p=>sanitizeSlug(p.kategori)===sanitizeSlug(kategori)
+		);
 
-const posts = await getPosts();
+		if(!filtered.length){
+			return new Response("Kategori tidak ditemukan",{status:404});
+		}
 
-const filtered = posts.filter(
-p => sanitizeSlug(p.kategori) === sanitizeSlug(kategori)
-);
+		const totalPage=Math.ceil(filtered.length/perPage);
 
-if(!filtered.length){
-return new Response(
-"Kategori tidak ditemukan",
-{status:404}
-);
-}
+		const start=(page-1)*perPage;
 
-const totalPage =
-Math.ceil(filtered.length / perPage);
+		const currentPosts=filtered.slice(start,start+perPage);
 
-const start =
-(page - 1) * perPage;
-
-const currentPosts =
-filtered.slice(start,start + perPage);
-
-const items = currentPosts.map(p=>`
+		const items=currentPosts.map(p=>`
 <a class="card" href="/amp/${sanitizeSlug(p.slug)}">
-
-<amp-img
-src="/og/${sanitizeSlug(p.slug)}"
-width="400"
-height="210"
-layout="responsive"
-alt="${escapeHTML(p.title)}">
-</amp-img>
-
+<amp-img src="/og/${sanitizeSlug(p.slug)}" width="400" height="210" layout="responsive" alt="${escapeHTML(p.title)}"></amp-img>
 <h3>${escapeHTML(p.title)}</h3>
-
 </a>
 `).join("");
 
-let pagination = "";
+		let pagination="";
 
-if(totalPage > 1){
+		if(totalPage>1){
+			pagination+=`<div class="pagination">`;
 
-pagination += `<div class="pagination">`;
+			if(page>1){
+				pagination+=`
+<a href="/amp/kategori/${sanitizeSlug(kategori)}?page=${page-1}">← Prev</a>
+`;
+			}
 
-if(page > 1){
-
-pagination += `
-<a href="/amp/kategori/${sanitizeSlug(kategori)}?page=${page-1}">
-← Prev
-</a>
+			pagination+=`
+<span class="page-info">Page ${page} / ${totalPage}</span>
 `;
 
-}
-
-pagination += `
-<span class="page-info">
-Page ${page} / ${totalPage}
-</span>
+			if(page<totalPage){
+				pagination+=`
+<a href="/amp/kategori/${sanitizeSlug(kategori)}?page=${page+1}">Next →</a>
 `;
+			}
 
-if(page < totalPage){
+			pagination+=`</div>`;
+		}
 
-pagination += `
-<a href="/amp/kategori/${sanitizeSlug(kategori)}?page=${page+1}">
-Next →
-</a>
-`;
-
-}
-
-pagination += `</div>`;
-
-}
-
-return renderAmp({
-
-title:
-`${kategori} AMP - ${SITE.name}`,
-
-description:
-`Kumpulan artikel AMP kategori ${kategori}`,
-
-canonical:
-canonical(
-`/kategori/${sanitizeSlug(kategori)}${
-page > 1 ? `?page=${page}` : ""
-}`
-),
-
-schema:`
+		return renderAmp({
+			title:`${kategori} AMP - ${SITE.name}`,
+			description:`Kumpulan artikel AMP kategori ${kategori}`,
+			canonical:canonical(`/kategori/${sanitizeSlug(kategori)}${page>1?`?page=${page}`:""}`),
+			schema:`
 <script type="application/ld+json">
 {
 "@context":"https://schema.org",
@@ -119,9 +73,7 @@ schema:`
 }
 </script>
 `,
-
-content:`
-
+			content:`
 <div class="hero">
 <h1>${escapeHTML(kategori)}</h1>
 <p>${filtered.length} artikel tersedia</p>
@@ -134,31 +86,15 @@ ${items}
 ${pagination}
 
 <div class="section">
-
-<h2>
-Tentang ${escapeHTML(kategori)}
-</h2>
-
+<h2>Tentang ${escapeHTML(kategori)}</h2>
 <p>
-Kumpulan artikel kategori
-${escapeHTML(kategori)}
-ringan, cepat, mobile friendly,
-dan SEO optimized.
+Kumpulan artikel kategori ${escapeHTML(kategori)} ringan, cepat, mobile friendly, dan SEO optimized.
 </p>
-
 </div>
-
 `
+		});
 
-});
-
-}catch(e){
-
-return new Response(
-"Error: "+e.message,
-{status:500}
-);
-
-}
-
+	}catch(e){
+		return new Response("Error: "+e.message,{status:500});
+	}
 }
