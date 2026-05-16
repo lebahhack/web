@@ -43,7 +43,7 @@ export async function onRequest(context){
 `
 		);
 
-		const linkedContent=autoLink(ampContent,related);
+		const linkedContent = ampContent;
 
 		const tocData=generateTOC(linkedContent);
 
@@ -115,55 +115,7 @@ ${related.map(p=>`
 	}
 }
 
-function autoLink(content="",related=[]){
-	let total=0;
-	const MAX=8;
-	const used=new Set();
 
-	const parser=related.map(p=>{
-		const title=stripHTML(p.title);
-		const slug=sanitizeSlug(p.slug);
-
-		const words=title.toLowerCase().split(" ").filter(w=>w.length>3);
-		const keyword=words.slice(0,3).join(" ");
-
-		return { title,slug,keyword };
-	});
-
-	return content.replace(
-		/(<a[^>]*>.*?<\/a>)|>([^<]+)</gis,
-		(match,link,text)=>{
-
-			if(link){
-				return link;
-			}
-
-			let result=text;
-
-			for(const item of parser){
-				if(total>=MAX)break;
-
-				if(!item.keyword||used.has(item.keyword)){
-					continue;
-				}
-
-				const regex=new RegExp(`\\b${escapeRegex(item.keyword)}\\b`,"i");
-
-				if(regex.test(result)){
-					result=result.replace(
-						regex,
-						`<a href="/amp/${item.slug}">${item.keyword}</a>`
-					);
-
-					used.add(item.keyword);
-					total++;
-				}
-			}
-
-			return ">"+result+"<";
-		}
-	);
-}
 
 function escapeRegex(str=""){
 	return str.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
