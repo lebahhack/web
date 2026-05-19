@@ -40,7 +40,9 @@ export async function onRequest(context){
 					)
 					.slice(0,6);
 
-				const linkedContent = post.content;
+				const linkedContent =
+String(post.content || "")
+.replace(/"\s*>/g,">");
 
 				const tocData=generateTOC(linkedContent);
 
@@ -66,7 +68,7 @@ export async function onRequest(context){
 <div class="card">
 <a href="/${p.slug}">
 ${cardImage(ogImage(p.slug),p.title)}
-<h3>${p.title}</h3>
+<h3>${escapeHTML(p.title)}</h3>
 </a>
 </div>
 `).join("");
@@ -89,7 +91,7 @@ ${breadcrumb}
 
 <article class="post">
 ${postImage(og,post.title)}
-<h1>${post.title}</h1>
+<h1>${escapeHTML(post.title)}</h1>
 <p>⏱ ${read} min read</p>
 
 <div class="post-content">
