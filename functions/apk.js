@@ -1,6 +1,6 @@
 import { layout } from "../lib/render";
 import { SITE, canonical } from "../lib/config";
-
+import { seo } from "../lib/seo";
 import { withCache } from "../lib/cache";
 
 export async function onRequest(context){
