@@ -73,7 +73,7 @@ ${seo({title:SITE.name,description:SITE.description})}
 </section>
 
 <section class="seo-box">
-<h2>Informasi Aplikasi Penghasil Cuan</h2>
+<h2>APK JS</h2>
 <p>
 Update aplikasi penghasil uang, AI modern, platform auto cuan, tips saldo digital, dan tren teknologi viral terbaru dengan informasi ringan dan mudah dipahami.
 </p>
