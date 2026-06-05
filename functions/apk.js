@@ -67,29 +67,10 @@ ${seo({title:SITE.name,description:SITE.description})}
 </script>
 `,
 					content:`
-<section class="hero">
-<h1>${SITE.name}</h1>
-<p>${SITE.description}</p>
-</section>
-
-<section class="seo-box">
-<h2>APK JS</h2>
 <p>
-Update aplikasi penghasil uang, AI modern, platform auto cuan, tips saldo digital, dan tren teknologi viral terbaru dengan informasi ringan dan mudah dipahami.
+apk js
 </p>
-</section>
 
-<input class="search" type="search" placeholder="Cari artikel...">
-<div id="results"></div>
-
-<h2>Artikel Terbaru</h2>
-
-<div class="grid">
-${grid}
-</div>
-
-${pagination(page,totalPage)}
-${searchScript()}
 `
 				});
 
