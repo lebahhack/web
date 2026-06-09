@@ -34,7 +34,7 @@ export async function onRequest(context){
 
 				switch(post.kategori){
 
-					case "Bisnis Online":
+					case "aimrferdy":
 						({ layout } = await import("../lib/render"));
 						break;
 
