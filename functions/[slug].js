@@ -1,4 +1,3 @@
-import { layout } from "../lib/render";
 import { getPosts, getPost } from "../lib/api";
 import {
 SITE,
@@ -31,7 +30,25 @@ export async function onRequest(context){
 					return new Response("404 Not Found",{status:404});
 				}
 
+				let layout;
+
+				switch(post.kategori){
+
+					case "Bisnis Online":
+						({ layout } = await import("../lib/render"));
+						break;
+
+					case "Aplikasi ai":
+						({ layout } = await import("../lib/renderA"));
+						break;
+
+					default:
+						({ layout } = await import("../lib/renderhome"));
+				}
+
 				const posts=await getPosts();
+
+			
 
 				const related=posts
 					.filter(p=>
